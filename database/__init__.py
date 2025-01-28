@@ -32,7 +32,8 @@ class Fetch(BaseModel):
     exception = peewee.CharField(null=True)
     etag_sent = peewee.CharField(null=True)
     modified_sent = peewee.CharField(null=True)
-
+    http_duration = peewee.DecimalField(null=True)
+    # alter table fetch add column http_duration decimal
 
 class Article(BaseModel):
     fetch = peewee.ForeignKeyField(Fetch)

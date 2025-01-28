@@ -1,6 +1,6 @@
 import hashlib
 import json
-from time import struct_time, mktime, sleep
+from time import struct_time, mktime, time
 from datetime import datetime, timedelta
 
 import feedparser
@@ -8,7 +8,7 @@ feedparser.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 
 from database import *
 
-EARLIEST_DATE = datetime(2025, 1, 1)
+EARLIEST_DATE = datetime.today() - timedelta(days=30) # datetime(2025, 1, 1)
 LATEST_DATE   = datetime.today() + timedelta(days=2)
 
 def fetch_and_save_feed(feed):
@@ -28,23 +28,37 @@ def fetch_and_save_feed(feed):
         fetch.modified_sent = last_fetch.modified
 
     try:
+        t1 = time()
         fp = feedparser.parse(feed.uri, **kwargs)
+        t2 = time()
+        http_duration = t2 - t1
     except Exception as e:
         fetch.exception = f"{type(e)} - {str(e)}"
+        print(fetch.exception)
         fp = None
+        http_duration = None
+
+    try:
+        if fp:
+            img = fp.feed.image
+            with open("feed-images.txt", "a") as f:
+                f.write(f"{feed.id}\t{feed.uri}\t{img}\n")
+    except Exception as e:
+        pass
+
 
     try:
         if fp.feed.title != feed.title:
             feed.title = fp.feed.title
             feed.save()
-    except:
+    except Exception as e:
         pass
 
     try:
         if fp.feed.subtitle != feed.subtitle:
             feed.subtitle = fp.feed.subtitle
             feed.save()
-    except:
+    except Exception as e:
         pass
 
     try:
@@ -56,7 +70,7 @@ def fetch_and_save_feed(feed):
         if link_href and link_href != feed.site_href:
             feed.site_href = link_href
             feed.save()
-    except:
+    except Exception as e:
         pass
 
     for field in ["etag","modified","modified_parsed","href","updated","updated_parsed","version","status"]:
@@ -68,6 +82,7 @@ def fetch_and_save_feed(feed):
 
             setattr(fetch, field, val)
 
+    fetch.http_duration = http_duration
     fetch.save()
     return fetch, fp
 
@@ -120,21 +135,42 @@ def save_articles(fetch, fp):
     return articles_saved
 
 
+def should_fetch_feed(feed):
+    try:
+        last_fetch = Fetch.select().where(Fetch.feed==feed).order_by(Fetch.timestamp.desc()).limit(1)[0]
+    except IndexError:
+        return True
+
+    if last_fetch.updated_parsed and datetime.today() - last_fetch.updated_parsed > timedelta(days=30):
+        #print(f"fetch too old: {last_fetch.updated_parsed}")
+        return False
+
+    try:
+        last_article = Article.select().where(Article.fetch==last_fetch).order_by(Article.published_parsed.desc()).limit(1)[0]
+        #if not last_article.published_parsed:
+        #    continue
+        # to do - 20
+        if last_article.published_parsed and datetime.today() - last_article.published_parsed > timedelta(days=20):
+            #print(f"article too old: {last_article.published_parsed}")
+            return False
+    except IndexError:
+        return True
+
+    return True
+
+
 if __name__=='__main__':
 
     if db.is_closed():
         db.connect()
 
-    #feeds = list(Feed.select())
+    feeds = list(Feed.select().order_by(peewee.fn.Random()))
     #feeds = list(Feed.select().where(Feed.uri=="..."))
 
     # feeds that have never been fetched
-    feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
+    #feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
 
-    import random
-    random.shuffle(feeds)
-
-    # to do - daily, weekly logic etc.
+    feeds = [feed for feed in feeds if should_fetch_feed(feed)]
 
     for n,feed in enumerate(feeds):
         print(f"{n:04}/{len(feeds):04} {feed.uri}")
@@ -145,8 +181,6 @@ if __name__=='__main__':
             continue
 
         articles_saved = save_articles(fetch, fp)
-
-        sleep(1)
 
         try:
             print(f"status {fp.status}, {articles_saved} articles saved")
