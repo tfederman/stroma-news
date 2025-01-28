@@ -1,7 +1,7 @@
 import hashlib
-import datetime
-import time
 import json
+from time import struct_time, mktime, sleep
+from datetime import datetime, timedelta
 
 import feedparser
 feedparser.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -9,6 +9,7 @@ feedparser.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 from database import *
 
 EARLIEST_DATE = datetime(2025, 1, 1)
+LATEST_DATE   = datetime.today() + timedelta(days=2)
 
 def fetch_and_save_feed(feed):
     try:
@@ -62,8 +63,8 @@ def fetch_and_save_feed(feed):
         if hasattr(fp, field):
             val = getattr(fp, field)
 
-            if isinstance(val, time.struct_time):
-                val = datetime.fromtimestamp(time.mktime(val))
+            if isinstance(val, struct_time):
+                val = datetime.fromtimestamp(mktime(val))
 
             setattr(fetch, field, val)
 
@@ -76,12 +77,19 @@ def save_articles(fetch, fp):
     articles_saved = 0
     for entry in fp.entries:
 
-        try:
-            if datetime.fromtimestamp(time.mktime(entry.updated_parsed)) < EARLIEST_DATE:
-                #print(f"skip {datetime.fromtimestamp(time.mktime(entry.updated_parsed))}")
-                continue
-        except Exception as e:
-            pass
+        for field in ["published_parsed","updated_parsed"]:
+            try:
+                setattr(entry, field, datetime.fromtimestamp(mktime(getattr(entry, field))))
+            except:
+                setattr(entry, field, None)
+
+        if (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
+            or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
+            or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
+            or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
+            #print(f"skip {datetime.fromtimestamp(mktime(entry.updated_parsed))}")
+            # to do - log to file
+            continue
 
         if not hasattr(entry, "id"):
             try:
@@ -95,29 +103,8 @@ def save_articles(fetch, fp):
 
         article = Article(fetch=fetch, entry_id=entry.id)
 
-        for field in ["title","summary","author","updated","updated_parsed","link","published","updated"]:
-            if hasattr(entry, field):
-                val = getattr(entry, field)
-
-                if isinstance(val, time.struct_time):
-                    try:
-                        val = datetime.fromtimestamp(time.mktime(val))
-                    except ValueError:
-                        val = None
-                elif isinstance(val, str):
-                    val = val[0:512]
-
-                setattr(article, field, val)
-
-        try:
-            article.updated_parsed = datetime.fromtimestamp(time.mktime(entry.updated_parsed))
-        except:
-            pass
-
-        try:
-            article.published_parsed = datetime.fromtimestamp(time.mktime(entry.published_parsed))
-        except:
-            pass
+        for field in ["title","summary","author","link","updated","updated_parsed","published","published_parsed"]:
+            setattr(article, field, getattr(entry, field, None))
 
         try:
             article.tags = json.dumps([t['term'] for t in entry.tags[:16]])
@@ -138,17 +125,18 @@ if __name__=='__main__':
     if db.is_closed():
         db.connect()
 
-    feeds = list(Feed.select())
+    #feeds = list(Feed.select())
+    #feeds = list(Feed.select().where(Feed.uri=="..."))
 
     # feeds that have never been fetched
-    #feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
+    feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
 
     import random
     random.shuffle(feeds)
 
     # to do - daily, weekly logic etc.
 
-    for n,feed in enumerate(feeds[:10]):
+    for n,feed in enumerate(feeds):
         print(f"{n:04}/{len(feeds):04} {feed.uri}")
 
         fetch, fp = fetch_and_save_feed(feed)
@@ -157,6 +145,8 @@ if __name__=='__main__':
             continue
 
         articles_saved = save_articles(fetch, fp)
+
+        sleep(1)
 
         try:
             print(f"status {fp.status}, {articles_saved} articles saved")
