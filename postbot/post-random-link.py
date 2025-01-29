@@ -1,7 +1,3 @@
-from datetime import datetime, timezone
-
-import peewee
-
 from bsky.client import Session
 from media.card import get_post
 from database import db
