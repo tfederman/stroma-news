@@ -1,5 +1,38 @@
+from datetime import datetime, timezone
+
 import requests
 from bs4 import BeautifulSoup
+
+
+def get_post(session, feed_title, title, link, description, published_parsed, author):
+
+    embed = get_link_card_embed(session, link, title, description)
+
+    text = []
+
+    if feed_title:
+        text.append(f'Feed: "{feed_title}"')
+
+    if author:
+        author = author.replace("(noreply@blogger.com)", "").strip()
+        if "unknown" in author.lower():
+            author = ""
+
+    if author and published_parsed:
+        text.append(f'By: {author}, published: {published_parsed[:-3]}')
+    elif author and not published_parsed:
+        text.append(f'By: {author}')
+    elif published_parsed and not author:
+        text.append(f'Published: {published_parsed[:-3]}')
+
+    post = {
+        "$type": "app.bsky.feed.post",
+        "text": "\n".join(text),
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "embed": embed,
+    }
+
+    return post
 
 
 def get_cardy_data(url):
