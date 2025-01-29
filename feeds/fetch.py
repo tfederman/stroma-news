@@ -76,7 +76,7 @@ def fetch_feed(feed, last_fetch):
     return fetch, fp
 
 
-def save_articles(fetch, fp):
+def save_articles(fetch, fp, last_fetch):
 
     saved_articles = []
     for entry in fp.entries:
@@ -87,7 +87,9 @@ def save_articles(fetch, fp):
             except:
                 setattr(entry, field, None)
 
-        if (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
+        # save article if this feed has never been fetched before, or if it falls in the date window
+        if last_fetch is None \
+            or (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
             or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
             or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
             or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
@@ -179,7 +181,7 @@ if __name__=='__main__':
         if not fp:
             continue
 
-        saved_articles = save_articles(fetch, fp)
+        saved_articles = save_articles(fetch, fp, last_fetch)
 
         if saved_articles:
             print(f"status {getattr(fp, 'status', '???')}, {len(saved_articles)} articles saved")
