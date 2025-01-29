@@ -3,23 +3,24 @@ import json
 from time import struct_time, mktime, time
 from datetime import datetime, timedelta
 
+import peewee
 import feedparser
-feedparser.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
-from database import *
+from database import db
+from database.models import Feed, Fetch, Article
 
-EARLIEST_DATE = datetime.today() - timedelta(days=30) # datetime(2025, 1, 1)
+EARLIEST_DATE = datetime.today() - timedelta(days=30)
 LATEST_DATE   = datetime.today() + timedelta(days=2)
 
-def fetch_and_save_feed(feed):
-    try:
-        last_fetch = Fetch.select().where(Fetch.feed==feed).order_by(Fetch.timestamp.desc()).limit(1)[0]
-    except IndexError as e:
-        last_fetch = None
+
+def fetch_feed(feed, last_fetch):
 
     fetch = Fetch(feed=feed)
 
     kwargs = {}
+
+    # send the saved etag or modified field from the last fetch of this feed
     if last_fetch and last_fetch.etag:
         kwargs["etag"] = last_fetch.etag
         fetch.etag_sent = last_fetch.etag
@@ -34,32 +35,18 @@ def fetch_and_save_feed(feed):
         http_duration = t2 - t1
     except Exception as e:
         fetch.exception = f"{type(e)} - {str(e)}"
+        # log to database
         print(fetch.exception)
         fp = None
         http_duration = None
 
-    try:
-        if fp:
-            img = fp.feed.image
-            with open("feed-images.txt", "a") as f:
-                f.write(f"{feed.id}\t{feed.uri}\t{img}\n")
-    except Exception as e:
-        pass
+    # update feed database record if there are new values of certain fields
+    for f in ["title","subtitle","image_url"]:
+        model_value = getattr(feed, f, None)
+        fetched_value = getattr(fp.feed, f, None)
 
-
-    try:
-        if fp.feed.title != feed.title:
-            feed.title = fp.feed.title
-            feed.save()
-    except Exception as e:
-        pass
-
-    try:
-        if fp.feed.subtitle != feed.subtitle:
-            feed.subtitle = fp.feed.subtitle
-            feed.save()
-    except Exception as e:
-        pass
+        if fetched_value and fetched_value != model_value:
+            setattr(feed, f, fetched_value)
 
     try:
         link_href = None
@@ -69,9 +56,11 @@ def fetch_and_save_feed(feed):
                 break
         if link_href and link_href != feed.site_href:
             feed.site_href = link_href
-            feed.save()
     except Exception as e:
         pass
+
+    if feed.is_dirty():
+        feed.save()
 
     for field in ["etag","modified","modified_parsed","href","updated","updated_parsed","version","status"]:
         if hasattr(fp, field):
@@ -89,7 +78,7 @@ def fetch_and_save_feed(feed):
 
 def save_articles(fetch, fp):
 
-    articles_saved = 0
+    saved_articles = []
     for entry in fp.entries:
 
         for field in ["published_parsed","updated_parsed"]:
@@ -102,8 +91,8 @@ def save_articles(fetch, fp):
             or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
             or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
             or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
-            #print(f"skip {datetime.fromtimestamp(mktime(entry.updated_parsed))}")
             # to do - log to file
+            # to do - allow articles earlier than window if it's the first time fetching the feed
             continue
 
         if not hasattr(entry, "id"):
@@ -130,9 +119,9 @@ def save_articles(fetch, fp):
             article.link = "(none)"
 
         article.save()
-        articles_saved += 1
+        saved_articles.append(article)
 
-    return articles_saved
+    return saved_articles
 
 
 def should_fetch_feed(feed, days=7):
@@ -141,22 +130,28 @@ def should_fetch_feed(feed, days=7):
     except IndexError:
         return True
 
+    # check age of the most recent fetch of this feed
     if last_fetch.updated_parsed and datetime.today() - last_fetch.updated_parsed > timedelta(days=days):
-        #print(f"fetch too old: {last_fetch.updated_parsed}")
         return False
 
     try:
         last_article = Article.select().where(Article.fetch==last_fetch).order_by(Article.published_parsed.desc()).limit(1)[0]
-        #if not last_article.published_parsed:
-        #    continue
-        # to do - 20
+
+        # check age of the most recent article from this feed
         if last_article.published_parsed and datetime.today() - last_article.published_parsed > timedelta(days=days):
-            #print(f"article too old: {last_article.published_parsed}")
             return False
+
     except IndexError:
         return True
 
     return True
+
+
+def get_last_fetch(feed):
+    try:
+        return Fetch.select().where(Fetch.feed==feed).order_by(Fetch.timestamp.desc()).limit(1)[0]
+    except IndexError as e:
+        return None
 
 
 if __name__=='__main__':
@@ -165,24 +160,26 @@ if __name__=='__main__':
         db.connect()
 
     feeds = list(Feed.select().order_by(peewee.fn.Random()))
-    #feeds = list(Feed.select().where(Feed.uri=="..."))
+
+    # specific feed
+    # feeds = list(Feed.select().where(Feed.uri=="..."))
 
     # feeds that have never been fetched
-    #feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
+    # feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
 
-    feeds = [feed for feed in feeds if should_fetch_feed(feed, days=4)]
+    feeds = [feed for feed in feeds if should_fetch_feed(feed, days=2)]
 
     for n,feed in enumerate(feeds):
         print(f"{n:04}/{len(feeds):04} {feed.uri}")
 
-        fetch, fp = fetch_and_save_feed(feed)
+        last_fetch = get_last_fetch(feed)
+
+        fetch, fp = fetch_feed(feed, last_fetch)
 
         if not fp:
             continue
 
-        articles_saved = save_articles(fetch, fp)
+        saved_articles = save_articles(fetch, fp)
 
-        try:
-            print(f"status {fp.status}, {articles_saved} articles saved")
-        except:
-            print(f"no fp.status, {articles_saved} articles saved")
+        if saved_articles:
+            print(f"status {getattr(fp, 'status', '???')}, {len(saved_articles)} articles saved")
