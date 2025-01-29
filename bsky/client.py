@@ -9,7 +9,6 @@ from .secrets import AUTH_USERNAME, AUTH_PASSWORD
 HOSTNAME_ENTRYWAY = "bsky.social"
 AUTH_METHOD_PASSWORD, AUTH_METHOD_TOKEN = range(2)
 SESSION_METHOD_CREATE, SESSION_METHOD_REFRESH = range(2)
-SERIALIZED_SESSION_PATH = "/tmp/bsky-session.json"
 
 """
 Usage:
@@ -30,8 +29,6 @@ class Session(object):
         try:
             print("++++++++ LOAD SERIALIZED SESSION +++++++++++++")
             self.load_serialized_session()
-            print(self.session_json())
-
         except Exception as e:
             print(f"+++++++ NO SERIALIZED SESSION: {e} ++++++++++")
             self.create_session()
@@ -55,10 +52,8 @@ class Session(object):
         self.create_method = method
         self.created_at = datetime.now().isoformat()
 
-        # to do - combine to db
-        self.serialize_filesystem()
-        self.serialize_database()
-        print(self.session_json())
+        self.serialize()
+        print(json.dumps(self.__dict__, indent=4))
 
         bs = BskySession(**self.__dict__)
         bs.save()
@@ -67,18 +62,13 @@ class Session(object):
     def refresh_session(self):
         self.create_session(method=SESSION_METHOD_REFRESH)
 
-    def serialize_filesystem(self):
-        open(SERIALIZED_SESSION_PATH, "w").write(self.session_json())
-
-    def serialize_database(self):
+    def serialize(self):
         bs = BskySession(**self.__dict__)
         bs.save()
 
     def load_serialized_session(self):
-        self.__dict__ = json.loads(open(SERIALIZED_SESSION_PATH).read())
-
-    def session_json(self):
-        return json.dumps(self.__dict__, indent=4)
+        db_session = BskySession.select().order_by(BskySession.created_at.desc())[0]
+        self.__dict__ = db_session.__dict__["__data__"]
 
 
     def call(self, method=requests.get, hostname=HOSTNAME_ENTRYWAY, endpoint=None, auth_method=AUTH_METHOD_TOKEN, params=None, use_refresh_token=False, data=None, headers=None):

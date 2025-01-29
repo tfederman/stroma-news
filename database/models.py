@@ -4,7 +4,6 @@ from datetime import datetime
 import peewee
 from peewee import CharField, DateTimeField, IntegerField, ForeignKeyField
 
-from .fields import SHA1HashedField
 from . import db
 
 
@@ -14,8 +13,8 @@ class BaseModel(peewee.Model):
 
 
 class BskySession(BaseModel):
-    accessJwt = SHA1HashedField()
-    refreshJwt = SHA1HashedField()
+    accessJwt = CharField()
+    refreshJwt = CharField()
     did = CharField()
     created_at = DateTimeField()
     create_method = IntegerField()
