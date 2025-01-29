@@ -10,6 +10,7 @@ if __name__ == "__main__":
     db.connect()
     session = Session()
 
+    #article = Article.select().where(Article.link=="https://andrewdoran.uk/blog/2025/01/18/11582/").order_by(peewee.fn.random()).limit(1)[0]
     article = Article.select().order_by(peewee.fn.random()).limit(1)[0]
 
     try:

@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 
 import requests
-from bs4 import BeautifulSoup
+
+from utils.string import html_to_text
 
 
 def get_post(session, feed_title, title, link, description, published_parsed, author):
@@ -17,8 +18,9 @@ def get_post(session, feed_title, title, link, description, published_parsed, au
         author = author.replace("(noreply@blogger.com)", "").strip()
         if "unknown" in author.lower():
             author = ""
+        author = html_to_text(author)
 
-    timestamp_format = "%A, %B %d, %Y"
+    timestamp_format = "%A, %B %-d, %Y"
 
     if author and published_parsed:
         text.append(f'By: {author} on {published_parsed.strftime(timestamp_format)}')
@@ -57,8 +59,7 @@ def get_link_card_embed(session, url, title, description):
     if cardy_description:
         description = cardy_description
     else:
-        soup = BeautifulSoup(description, 'html.parser')
-        description = soup.get_text(strip=True)
+        description = html_to_text(description)
 
     card = {"uri": url, "title": title, "description": description}
 
