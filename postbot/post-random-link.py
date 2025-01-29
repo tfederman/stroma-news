@@ -1,20 +1,30 @@
+import peewee
+
 from bsky.client import Session
 from media.card import get_post
 from database import db
-
+from database.models import Article, ArticlePost
 
 if __name__ == "__main__":
 
     db.connect()
     session = Session()
 
-    feed_title, title, link, description, published_parsed, author = db.execute_sql("""
-        select feed.title, a.title, link, summary, a.published_parsed, author
-        from article a
-            inner join fetch f on f.id=a.fetch_id
-            inner join feed on feed.id=f.feed_id
-        order by random() limit 1;""").fetchone()
+    article = Article.select().order_by(peewee.fn.random()).limit(1)[0]
 
-    post = get_post(session, feed_title, title, link, description, published_parsed, author)
+    try:
+        post = get_post(session, article.fetch.feed.title,
+            article.title, article.link, article.summary,
+            article.published_parsed, article.author)
+        response = session.create_record(post)
+        print(response)
+        uri = response.uri
+        post_id = response.uri.split("/")[-1]
+        exception = None
+    except Exception as e:
+        exception = f"{e.__class__.__name__} - {e}"
+        uri = None
+        post_id = None
 
-    print(session.create_record(post))
+    article_post = ArticlePost(uri=uri, post_id=post_id, article=article, exception=exception)
+    article_post.save()

@@ -18,12 +18,14 @@ def get_post(session, feed_title, title, link, description, published_parsed, au
         if "unknown" in author.lower():
             author = ""
 
+    timestamp_format = "%A, %B %d, %Y"
+
     if author and published_parsed:
-        text.append(f'By: {author}, published: {published_parsed[:-3]}')
+        text.append(f'By: {author} on {published_parsed.strftime(timestamp_format)}')
     elif author and not published_parsed:
         text.append(f'By: {author}')
     elif published_parsed and not author:
-        text.append(f'Published: {published_parsed[:-3]}')
+        text.append(f'Published on {published_parsed.strftime(timestamp_format)}')
 
     post = {
         "$type": "app.bsky.feed.post",

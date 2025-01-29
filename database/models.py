@@ -5,8 +5,7 @@ import peewee
 from peewee import CharField, DateTimeField, IntegerField, ForeignKeyField
 
 from .fields import SHA1HashedField
-
-db = peewee.SqliteDatabase(f"{os.path.dirname(os.path.abspath(__file__))}/stroma.db")
+from . import db
 
 
 class BaseModel(peewee.Model):
@@ -69,9 +68,12 @@ class Article(BaseModel):
 class ArticlePost(BaseModel):
     article = ForeignKeyField(Article)
     posted_at = DateTimeField(default=datetime.utcnow)
-    post_url = CharField(null=True)
+    post_id = CharField(null=True)
     exception = CharField(null=True)
-    status = IntegerField(null=True)
+    uri = CharField(null=True)
+
+    class Meta:
+        table_name = "article_post"
 
 
 if __name__=="__main__":
