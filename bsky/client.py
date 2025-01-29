@@ -89,9 +89,9 @@ class Session(object):
         args["headers"] = headers or {}
 
         if auth_method == AUTH_METHOD_TOKEN and not use_refresh_token:
-            args["headers"].update({"Authorization": f"Bearer {self.session.accessJwt}"})
+            args["headers"].update({"Authorization": f"Bearer {self.accessJwt}"})
         elif auth_method == AUTH_METHOD_TOKEN and use_refresh_token:
-            args["headers"].update({"Authorization": f"Bearer {self.session.refreshJwt}"})
+            args["headers"].update({"Authorization": f"Bearer {self.refreshJwt}"})
         elif auth_method == AUTH_METHOD_PASSWORD:
             args["json"] = {"identifier": AUTH_USERNAME, "password": AUTH_PASSWORD}
 
@@ -108,9 +108,8 @@ class Session(object):
         r = method(uri, **args)
 
         if r.status_code == 400 and r.json()["error"] == "ExpiredToken":
-            print("++++++++ REFRESHING SESSION ++++++++")
             self.refresh_session()
-            args["headers"]["Authorization"] = f"Bearer {self.session.accessJwt}"
+            args["headers"]["Authorization"] = f"Bearer {self.accessJwt}"
             r = method(uri, **args)
 
         if r.status_code != 200:
@@ -142,7 +141,7 @@ class Session(object):
 
     def create_record(self, post):
         params = {
-            "repo": self.session.did,
+            "repo": self.did,
             "collection": "app.bsky.feed.post",
             "record": post,
         }
