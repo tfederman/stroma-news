@@ -135,13 +135,13 @@ def save_articles(fetch, fp):
     return articles_saved
 
 
-def should_fetch_feed(feed):
+def should_fetch_feed(feed, days=7):
     try:
         last_fetch = Fetch.select().where(Fetch.feed==feed).order_by(Fetch.timestamp.desc()).limit(1)[0]
     except IndexError:
         return True
 
-    if last_fetch.updated_parsed and datetime.today() - last_fetch.updated_parsed > timedelta(days=30):
+    if last_fetch.updated_parsed and datetime.today() - last_fetch.updated_parsed > timedelta(days=days):
         #print(f"fetch too old: {last_fetch.updated_parsed}")
         return False
 
@@ -150,7 +150,7 @@ def should_fetch_feed(feed):
         #if not last_article.published_parsed:
         #    continue
         # to do - 20
-        if last_article.published_parsed and datetime.today() - last_article.published_parsed > timedelta(days=20):
+        if last_article.published_parsed and datetime.today() - last_article.published_parsed > timedelta(days=days):
             #print(f"article too old: {last_article.published_parsed}")
             return False
     except IndexError:
@@ -170,7 +170,7 @@ if __name__=='__main__':
     # feeds that have never been fetched
     #feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
 
-    feeds = [feed for feed in feeds if should_fetch_feed(feed)]
+    feeds = [feed for feed in feeds if should_fetch_feed(feed, days=4)]
 
     for n,feed in enumerate(feeds):
         print(f"{n:04}/{len(feeds):04} {feed.uri}")
