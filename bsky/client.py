@@ -1,12 +1,15 @@
 import json
 from types import SimpleNamespace
-
+from datetime import datetime
 import requests
 
-from secrets import AUTH_USERNAME, AUTH_PASSWORD
+from database.models import BskySession
+from .secrets import AUTH_USERNAME, AUTH_PASSWORD
 
 HOSTNAME_ENTRYWAY = "bsky.social"
 AUTH_METHOD_PASSWORD, AUTH_METHOD_TOKEN = range(2)
+SESSION_METHOD_CREATE, SESSION_METHOD_REFRESH = range(2)
+SERIALIZED_SESSION_PATH = "/tmp/bsky-session.json"
 
 """
 Usage:
@@ -23,25 +26,79 @@ session.post(hostname="api.bsky.app",  endpoint="xrpc/app.bsky.notification.upda
 class Session(object):
 
     def __init__(self):
-        self.session = self.post(endpoint="xrpc/com.atproto.server.createSession", auth_method=AUTH_METHOD_PASSWORD)
+        # note - don't add class attributes that aren't json serializable
+        try:
+            print("++++++++ LOAD SERIALIZED SESSION +++++++++++++")
+            self.load_serialized_session()
+            print(self.session_json())
+
+        except Exception as e:
+            print(f"+++++++ NO SERIALIZED SESSION: {e} ++++++++++")
+            self.create_session()
+
+    def create_session(self, method=SESSION_METHOD_CREATE):
+
+        try:
+            if method == SESSION_METHOD_CREATE:
+                print("++++++++++++ NEW SESSION ++++++++++++")
+                session = self.post(endpoint="xrpc/com.atproto.server.createSession", auth_method=AUTH_METHOD_PASSWORD)
+            elif method == SESSION_METHOD_REFRESH:
+                print("++++++++++++ REFRESH SESSION ++++++++++++")
+                session = self.post(endpoint="xrpc/com.atproto.server.refreshSession", use_refresh_token=True)
+            self.exception = None
+            self.accessJwt = session.accessJwt
+            self.refreshJwt = session.refreshJwt
+            self.did = session.did
+        except Exception as e:
+            self.exception = f"{e.__class__.__name__} - {e}"
+
+        self.create_method = method
+        self.created_at = datetime.now().isoformat()
+
+        # to do - combine to db
+        self.serialize_filesystem()
+        self.serialize_database()
+        print(self.session_json())
+
+        bs = BskySession(**self.__dict__)
+        bs.save()
+
 
     def refresh_session(self):
-        self.session = self.post(endpoint="xrpc/com.atproto.server.refreshSession", use_refresh_token=True)
+        self.create_session(method=SESSION_METHOD_REFRESH)
 
-    def call(self, method=requests.get, hostname=HOSTNAME_ENTRYWAY, endpoint=None, auth_method=AUTH_METHOD_TOKEN, params=None, use_refresh_token=False):
+    def serialize_filesystem(self):
+        open(SERIALIZED_SESSION_PATH, "w").write(self.session_json())
+
+    def serialize_database(self):
+        bs = BskySession(**self.__dict__)
+        bs.save()
+
+    def load_serialized_session(self):
+        self.__dict__ = json.loads(open(SERIALIZED_SESSION_PATH).read())
+
+    def session_json(self):
+        return json.dumps(self.__dict__, indent=4)
+
+
+    def call(self, method=requests.get, hostname=HOSTNAME_ENTRYWAY, endpoint=None, auth_method=AUTH_METHOD_TOKEN, params=None, use_refresh_token=False, data=None, headers=None):
 
         uri = f"https://{hostname}/{endpoint}"
+
         args = {}
+        args["headers"] = headers or {}
 
         if auth_method == AUTH_METHOD_TOKEN and not use_refresh_token:
-            args["headers"] = {"Authorization": f"Bearer {self.session.accessJwt}"}
+            args["headers"].update({"Authorization": f"Bearer {self.session.accessJwt}"})
         elif auth_method == AUTH_METHOD_TOKEN and use_refresh_token:
-            args["headers"] = {"Authorization": f"Bearer {self.session.refreshJwt}"}
+            args["headers"].update({"Authorization": f"Bearer {self.session.refreshJwt}"})
         elif auth_method == AUTH_METHOD_PASSWORD:
             args["json"] = {"identifier": AUTH_USERNAME, "password": AUTH_PASSWORD}
 
         if params and method == requests.get:
             args["params"] = params
+        elif data and method == requests.post:
+            args["data"] = data
         elif params and method == requests.post:
             if "json" in args:
                 args["json"].update(params)
@@ -51,8 +108,9 @@ class Session(object):
         r = method(uri, **args)
 
         if r.status_code == 400 and r.json()["error"] == "ExpiredToken":
+            print("++++++++ REFRESHING SESSION ++++++++")
             self.refresh_session()
-            args["headers"] = {"Authorization": f"Bearer {self.session.accessJwt}"}
+            args["headers"]["Authorization"] = f"Bearer {self.session.accessJwt}"
             r = method(uri, **args)
 
         if r.status_code != 200:
@@ -78,3 +136,14 @@ class Session(object):
     def get(self, **kwargs):
         kwargs["method"] = requests.get
         return self.call(**kwargs)
+
+    def upload_file(self, image_data, mimetype):
+        return self.call(method=requests.post, data=image_data, endpoint="xrpc/com.atproto.repo.uploadBlob", headers={"Content-Type": mimetype})
+
+    def create_record(self, post):
+        params = {
+            "repo": self.session.did,
+            "collection": "app.bsky.feed.post",
+            "record": post,
+        }
+        return self.call(method=requests.post, endpoint="xrpc/com.atproto.repo.createRecord", params=params)
