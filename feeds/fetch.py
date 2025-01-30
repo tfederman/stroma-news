@@ -1,7 +1,7 @@
 import hashlib
 import json
 from time import struct_time, mktime, time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 import peewee
 import feedparser
@@ -89,14 +89,13 @@ def save_articles(fetch, fp, last_fetch):
                 setattr(entry, field, None)
 
         # save article if this feed has never been fetched before, or if it falls in the date window
-        if last_fetch is None \
-            or (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
-            or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
-            or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
-            or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
-            # to do - log to file
-            # to do - allow articles earlier than window if it's the first time fetching the feed
-            continue
+        if last_fetch:
+            if (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
+                or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
+                or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
+                or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
+                # to do - log to file
+                continue
 
         if not hasattr(entry, "id"):
             try:
@@ -127,38 +126,28 @@ def save_articles(fetch, fp, last_fetch):
     return saved_articles
 
 
-def should_fetch_feed(feed, days=7):
-    try:
-        last_fetch = Fetch.select().where(Fetch.feed==feed).order_by(Fetch.timestamp.desc()).limit(1)[0]
-    except IndexError:
-        return True
-
-    # skip feeds that were fetched very recently
-    if datetime.now() - last_fetch.timestamp < timedelta(hours=4):
-        return False
-
-    # check updated age of the most recent fetch of this feed
-    if last_fetch.updated_parsed and datetime.now() - last_fetch.updated_parsed > timedelta(days=days):
-        return False
-
-    try:
-        last_article = Article.select().where(Article.fetch==last_fetch).order_by(Article.published_parsed.desc()).limit(1)[0]
-
-        # check age of the most recent article from this feed
-        if last_article.published_parsed and datetime.now() - last_article.published_parsed > timedelta(days=days):
-            return False
-
-    except IndexError:
-        return True
-
-    return True
-
-
 def get_last_fetch(feed):
     try:
         return Fetch.select().where(Fetch.feed==feed).order_by(Fetch.timestamp.desc()).limit(1)[0]
     except IndexError as e:
         return None
+
+
+def get_feeds_to_fetch(recent_fetch_hours=2, recent_fetch_content_days=4):
+
+    now = datetime.now(UTC)
+
+    # feeds to fetch = all_feeds - feeds fetched in last n hours - feeds without article published in last n days - feeds not updated in last n days
+    all_feeds = set(Feed.select())
+    feeds_recently_fetched = set(Feed.select().join(Fetch).where(now - Fetch.timestamp < timedelta(hours=recent_fetch_hours)))
+    feeds_without_recent_published_article = set(Feed.select().join(Fetch).join(Article).where(now - Article.published_parsed > timedelta(days=recent_fetch_content_days)))
+    feeds_without_recent_update = set(Feed.select().join(Fetch).where(now - Fetch.updated_parsed > timedelta(days=recent_fetch_content_days)))
+
+    feeds_to_fetch = all_feeds - feeds_recently_fetched - \
+                        feeds_without_recent_published_article - \
+                        feeds_without_recent_update
+
+    return feeds_to_fetch
 
 
 if __name__=='__main__':
@@ -174,10 +163,10 @@ if __name__=='__main__':
     # feeds that have never been fetched
     # feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
 
-    feeds = [feed for feed in feeds if should_fetch_feed(feed, days=7)]
+    feeds_to_fetch = get_feeds_to_fetch()
 
-    for n,feed in enumerate(feeds):
-        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1:04}/{len(feeds):04} {feed.uri}")
+    for n,feed in enumerate(feeds_to_fetch):
+        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1:04}/{len(feeds_to_fetch):04} {feed.uri}")
 
         last_fetch = get_last_fetch(feed)
 
