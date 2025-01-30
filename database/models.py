@@ -2,7 +2,8 @@ import os
 from datetime import datetime
 
 import peewee
-from peewee import DateTimeField, IntegerField, ForeignKeyField
+from peewee import IntegerField, ForeignKeyField
+from playhouse.postgres_ext import DateTimeTZField as DateTimeField
 
 from database import db
 from database.fields import PostgreSQLCharField as CharField
@@ -27,7 +28,7 @@ class BskySession(BaseModel):
 
 class Feed(BaseModel):
     uri = CharField(unique=True)
-    added_at = DateTimeField(default=datetime.utcnow)
+    added_at = DateTimeField(default=datetime.now)
     title = CharField(null=True)
     subtitle = CharField(null=True)
     site_href = CharField(null=True)
@@ -37,7 +38,7 @@ class Feed(BaseModel):
 class Fetch(BaseModel):
     feed = ForeignKeyField(Feed)
     version = CharField(null=True)
-    timestamp = DateTimeField(default=datetime.utcnow)
+    timestamp = DateTimeField(default=datetime.now)
     status = IntegerField(null=True)
     updated = CharField(null=True)
     updated_parsed = DateTimeField(null=True)
@@ -68,7 +69,7 @@ class Article(BaseModel):
 
 class ArticleMeta(BaseModel):
     article = ForeignKeyField(Article, unique=True)
-    timestamp = DateTimeField(default=datetime.utcnow)
+    timestamp = DateTimeField(default=datetime.now)
     og_title = CharField(null=True)
     og_url = CharField(null=True)
     og_image = CharField(null=True)
@@ -83,7 +84,7 @@ class ArticleMeta(BaseModel):
 
 class ArticlePost(BaseModel):
     article = ForeignKeyField(Article, unique=True)
-    posted_at = DateTimeField(default=datetime.utcnow)
+    posted_at = DateTimeField(default=datetime.now)
     post_id = CharField(null=True)
     exception = CharField(null=True)
     uri = CharField(null=True)
