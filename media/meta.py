@@ -34,10 +34,12 @@ def get_article_meta(article):
         bs = BeautifulSoup(r.text, 'html.parser')
 
         tags = {
-            "og_title":      lambda bs: bs.find("meta", property="og:title").attrs["content"],
-            "og_url":        lambda bs: bs.find("meta", property="og:url").attrs["content"],
-            "og_image":      lambda bs: bs.find("meta", property="og:image").attrs["content"],
-            "twitter_image": lambda bs: bs.find_all("meta", attrs={"name":"twitter:image"})[0].attrs["content"],
+            "og_title": lambda bs: bs.find("meta", property="og:title").attrs["content"],
+            "og_url":   lambda bs: bs.find("meta", property="og:url").attrs["content"],
+            "og_image": lambda bs: bs.find("meta", property="og:image").attrs["content"],
+            "og_description":      lambda bs: bs.find("meta", property="og:description").attrs["content"],
+            "twitter_image":       lambda bs: bs.find_all("meta", attrs={"name":"twitter:image"})[0].attrs["content"],
+            "twitter_description": lambda bs: bs.find_all("meta", attrs={"name":"twitter:description"})[0].attrs["content"],
         }
 
         for k,v in tags.items():
