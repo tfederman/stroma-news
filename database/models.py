@@ -98,19 +98,29 @@ def migrate_pgsql(cls, con):
     cursor = con.cursor()
     column_count = len(rows[0])
     column_placeholders = ",".join(["%s"] * column_count)
-    cursor.executemany(f'INSERT INTO "{cls._meta.table_name}" VALUES ({column_placeholders})', rows)
+    table = cls._meta.table_name
+    cursor.executemany(f'INSERT INTO "{table}" VALUES ({column_placeholders})', rows)
+    cursor.execute(f"SELECT setval('{table}_id_seq', (SELECT MAX(id) FROM \"{table}\"));")
     con.commit()
 
 
 if __name__=="__main__":
+    pass
 
+    # create the tables
+    # db.create_tables([BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta])
 
-    # migrate sqlite data to postgres
+    # migrating sqlite data to postgres:
     # import psycopg2
     # con = psycopg2.connect("dbname=stroma ...")
     # for cls in [BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta]:
     #     print(f"migrating {cls._meta.table_name}...")
     #     migrate_pgsql(cls, con)
 
-    # create the tables
-    # db.create_tables([BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta])
+    # after migrating data:
+    # SELECT setval('article_id_seq', (SELECT MAX(id) FROM "article"));
+    # SELECT setval('article_meta_id_seq', (SELECT MAX(id) FROM "article_meta"));
+    # SELECT setval('article_post_id_seq', (SELECT MAX(id) FROM "article_post"));
+    # SELECT setval('bsky_session_id_seq', (SELECT MAX(id) FROM "bsky_session"));
+    # SELECT setval('feed_id_seq', (SELECT MAX(id) FROM "feed"));
+    # SELECT setval('fetch_id_seq', (SELECT MAX(id) FROM "fetch"));

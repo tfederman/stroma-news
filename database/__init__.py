@@ -1,5 +1,3 @@
-import os
+from playhouse.postgres_ext import PostgresqlExtDatabase
 
-import peewee
-
-db = peewee.SqliteDatabase(f"{os.path.dirname(os.path.abspath(__file__))}/stroma.db")
+db = PostgresqlExtDatabase('stroma', user='postgres', host='localhost')
