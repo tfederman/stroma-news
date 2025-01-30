@@ -7,6 +7,7 @@ from utils.string import html_to_text
 
 def get_post(session, feed_title, title, link, description, published_parsed, author):
 
+    title = html_to_text(title)
     embed = get_link_card_embed(session, link, title, description)
 
     text = []
@@ -42,11 +43,10 @@ def get_post(session, feed_title, title, link, description, published_parsed, au
 def get_cardy_data(url):
     try:
         r = requests.get(f"https://cardyb.bsky.app/v1/extract?url={url}")
-        image_url = r.json()["image"]
         assert r.status_code == 200, f"HTTP error getting cardy data: {r.status_code} - {r.text}"
         return r.json()
     except Exception as e:
-        #print("error fetching image url from cardy:", e)
+        print("+++ ERROR fetching cardy data:", e)
         return {}
 
 

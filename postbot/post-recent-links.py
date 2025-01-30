@@ -1,4 +1,5 @@
 import time
+import traceback
 from datetime import datetime, timedelta
 
 import peewee
@@ -20,7 +21,7 @@ def post_article(session, article):
         post_id = response.uri.split("/")[-1]
         exception = None
     except Exception as e:
-        exception = f"{e.__class__.__name__} - {e}"
+        exception = f"{e.__class__.__name__} - {e}\n{traceback.format_exc()}"
         uri = None
         post_id = None
 
@@ -38,13 +39,13 @@ if __name__ == "__main__":
         .join(Fetch) \
         .join(ArticlePost, peewee.JOIN.LEFT_OUTER, on=(ArticlePost.article_id==Article.id)) \
         .where(ArticlePost.id==None) \
-        .where(Fetch.timestamp >= datetime.now() - timedelta(hours=4))
+        .where(Fetch.timestamp >= datetime.now() - timedelta(hours=24))
 
     # keep within hourly rate limit (5000 points/hour @ 3 points/create)
     articles = articles[:1500]
 
     for n,article in enumerate(articles):
-        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1}/{len(articles)} - {article.title}")
+        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1}/{len(articles)} - {article.id} - {article.title}")
         article_post = post_article(session, article)
         if article_post.exception:
             print(f"+++ EXCEPTION {article_post.id} -", article_post.exception)

@@ -7,4 +7,4 @@ def html_to_text(s):
         return s
 
     soup = BeautifulSoup(s, 'html.parser')
-    return soup.get_text(strip=True)
+    return soup.get_text(strip=False)
