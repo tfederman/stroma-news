@@ -1,20 +1,18 @@
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 import peewee
 
 from bsky.client import Session
 from media.card import get_post
 from database import db
-from database.models import Article, ArticlePost, Fetch
+from database.models import Article, ArticlePost, Fetch, ArticleMeta
 
 
 def post_article(session, article):
     try:
-        post = get_post(session, article.fetch.feed.title,
-            article.title, article.link, article.summary,
-            article.published_parsed, article.author)
+        post = get_post(session, article)
 
         response = session.create_record(post)
         uri = response.uri
@@ -37,12 +35,14 @@ if __name__ == "__main__":
 
     articles = Article.select() \
         .join(Fetch) \
+        .join(ArticleMeta, on=(Article.id==ArticleMeta.article_id)) \
         .join(ArticlePost, peewee.JOIN.LEFT_OUTER, on=(ArticlePost.article_id==Article.id)) \
         .where(ArticlePost.id==None) \
-        .where(Fetch.timestamp >= datetime.now() - timedelta(hours=24))
+        .where(Fetch.timestamp >= datetime.now(UTC) - timedelta(hours=24))
 
     # keep within hourly rate limit (5000 points/hour @ 3 points/create)
     articles = articles[:1500]
+    articles = articles[:20]
 
     for n,article in enumerate(articles):
         print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1}/{len(articles)} - {article.id} - {article.title}")
