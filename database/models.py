@@ -77,6 +77,8 @@ class ArticleMeta(BaseModel):
     status = IntegerField(null=True)
     exception = CharField(null=True)
     text = CharField(null=True)
+    og_description = CharField(null=True)
+    twitter_description = CharField(null=True)
 
     class Meta:
         table_name = "article_meta"
