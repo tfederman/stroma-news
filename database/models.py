@@ -30,6 +30,7 @@ class Feed(BaseModel):
     title = CharField(null=True)
     subtitle = CharField(null=True)
     site_href = CharField(null=True)
+    image_url = CharField(null=True)
 
 
 class Fetch(BaseModel):
@@ -65,7 +66,7 @@ class Article(BaseModel):
 
 
 class ArticlePost(BaseModel):
-    article = ForeignKeyField(Article)
+    article = ForeignKeyField(Article, unique=True)
     posted_at = DateTimeField(default=datetime.utcnow)
     post_id = CharField(null=True)
     exception = CharField(null=True)

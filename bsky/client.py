@@ -27,7 +27,6 @@ class Session(object):
     def __init__(self):
         # note - don't add class attributes that aren't json serializable
         try:
-            print("++++++++ LOAD SERIALIZED SESSION +++++++++++++")
             self.load_serialized_session()
         except Exception as e:
             print(f"+++++++ NO SERIALIZED SESSION: {e} ++++++++++")
