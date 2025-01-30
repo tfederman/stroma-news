@@ -9,6 +9,7 @@ feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
 from database import db
 from database.models import Feed, Fetch, Article
+from media.meta import get_article_meta
 
 EARLIEST_DATE = datetime.today() - timedelta(days=30)
 LATEST_DATE   = datetime.today() + timedelta(days=2)
@@ -132,15 +133,19 @@ def should_fetch_feed(feed, days=7):
     except IndexError:
         return True
 
-    # check age of the most recent fetch of this feed
-    if last_fetch.updated_parsed and datetime.today() - last_fetch.updated_parsed > timedelta(days=days):
+    # skip feeds that were fetched very recently
+    if datetime.now() - last_fetch.timestamp < timedelta(hours=4):
+        return False
+
+    # check updated age of the most recent fetch of this feed
+    if last_fetch.updated_parsed and datetime.now() - last_fetch.updated_parsed > timedelta(days=days):
         return False
 
     try:
         last_article = Article.select().where(Article.fetch==last_fetch).order_by(Article.published_parsed.desc()).limit(1)[0]
 
         # check age of the most recent article from this feed
-        if last_article.published_parsed and datetime.today() - last_article.published_parsed > timedelta(days=days):
+        if last_article.published_parsed and datetime.now() - last_article.published_parsed > timedelta(days=days):
             return False
 
     except IndexError:
@@ -169,10 +174,10 @@ if __name__=='__main__':
     # feeds that have never been fetched
     # feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
 
-    feeds = [feed for feed in feeds if should_fetch_feed(feed, days=2)]
+    feeds = [feed for feed in feeds if should_fetch_feed(feed, days=7)]
 
     for n,feed in enumerate(feeds):
-        print(f"{n:04}/{len(feeds):04} {feed.uri}")
+        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1:04}/{len(feeds):04} {feed.uri}")
 
         last_fetch = get_last_fetch(feed)
 
@@ -182,6 +187,9 @@ if __name__=='__main__':
             continue
 
         saved_articles = save_articles(fetch, fp, last_fetch)
+
+        for article in saved_articles:
+            get_article_meta(article)
 
         if saved_articles:
             print(f"status {getattr(fp, 'status', '???')}, {len(saved_articles)} articles saved")

@@ -65,6 +65,21 @@ class Article(BaseModel):
     published_parsed = DateTimeField(null=True)
 
 
+class ArticleMeta(BaseModel):
+    article = ForeignKeyField(Article, unique=True)
+    timestamp = DateTimeField(default=datetime.utcnow)
+    og_title = CharField(null=True)
+    og_url = CharField(null=True)
+    og_image = CharField(null=True)
+    twitter_image = CharField(null=True)
+    status = IntegerField(null=True)
+    exception = CharField(null=True)
+    text = CharField(null=True)
+
+    class Meta:
+        table_name = "article_meta"
+
+
 class ArticlePost(BaseModel):
     article = ForeignKeyField(Article, unique=True)
     posted_at = DateTimeField(default=datetime.utcnow)
