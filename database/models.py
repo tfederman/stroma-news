@@ -116,11 +116,3 @@ if __name__=="__main__":
     # for cls in [BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta]:
     #     print(f"migrating {cls._meta.table_name}...")
     #     migrate_pgsql(cls, con)
-
-    # after migrating data:
-    # SELECT setval('article_id_seq', (SELECT MAX(id) FROM "article"));
-    # SELECT setval('article_meta_id_seq', (SELECT MAX(id) FROM "article_meta"));
-    # SELECT setval('article_post_id_seq', (SELECT MAX(id) FROM "article_post"));
-    # SELECT setval('bsky_session_id_seq', (SELECT MAX(id) FROM "bsky_session"));
-    # SELECT setval('feed_id_seq', (SELECT MAX(id) FROM "feed"));
-    # SELECT setval('fetch_id_seq', (SELECT MAX(id) FROM "fetch"));
