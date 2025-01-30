@@ -2,6 +2,10 @@ import hashlib
 
 import peewee
 
+class PostgreSQLCharField(peewee.Field):
+    """Don't force a max length."""
+    field_type = 'varchar'
+
 
 class SHA1HashedField(peewee.Field):
     """Hash a string value on its way into the database so as to be able to track distinct values without saving the sensitive raw data."""

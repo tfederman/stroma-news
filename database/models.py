@@ -2,9 +2,10 @@ import os
 from datetime import datetime
 
 import peewee
-from peewee import CharField, DateTimeField, IntegerField, ForeignKeyField
+from peewee import DateTimeField, IntegerField, ForeignKeyField
 
-from . import db
+from database import db
+from database.fields import PostgreSQLCharField as CharField
 
 
 class BaseModel(peewee.Model):
@@ -59,7 +60,7 @@ class Article(BaseModel):
     summary = CharField(null=True)
     author = CharField(null=True)
     tags = CharField(null=True)
-    updated = DateTimeField(null=True)
+    updated = CharField(null=True)
     updated_parsed = DateTimeField(null=True)
     published = CharField(null=True)
     published_parsed = DateTimeField(null=True)
@@ -91,8 +92,25 @@ class ArticlePost(BaseModel):
         table_name = "article_post"
 
 
+def migrate_pgsql(cls, con):
+    """Migrate the data from the current sqlite db into a postgresql db"""
+    rows = list(cls.select().order_by(cls.id).tuples())
+    cursor = con.cursor()
+    column_count = len(rows[0])
+    column_placeholders = ",".join(["%s"] * column_count)
+    cursor.executemany(f'INSERT INTO "{cls._meta.table_name}" VALUES ({column_placeholders})', rows)
+    con.commit()
+
+
 if __name__=="__main__":
 
-    if db.is_closed():
-        db.connect()
-        db.create_tables([BskySession, Feed, Fetch, Article, ArticlePost])
+
+    # migrate sqlite data to postgres
+    # import psycopg2
+    # con = psycopg2.connect("dbname=stroma ...")
+    # for cls in [BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta]:
+    #     print(f"migrating {cls._meta.table_name}...")
+    #     migrate_pgsql(cls, con)
+
+    # create the tables
+    # db.create_tables([BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta])
