@@ -33,7 +33,7 @@ class Feed(BaseModel):
     image_url = CharField(null=True)
 
 
-class Fetch(BaseModel):
+class FeedFetch(BaseModel):
     feed = ForeignKeyField(Feed)
     version = CharField(null=True)
     timestamp = DateTimeField(default=datetime.now)
@@ -48,11 +48,13 @@ class Fetch(BaseModel):
     etag_sent = CharField(null=True)
     modified_sent = CharField(null=True)
     http_duration = DecimalField(null=True)
-    # alter table fetch add column http_duration decimal
+
+    class Meta:
+        table_name = "feed_fetch"
 
 
 class Article(BaseModel):
-    fetch = ForeignKeyField(Fetch)
+    feed_fetch = ForeignKeyField(FeedFetch)
     link = CharField()
     title = CharField(null=True)
     entry_id = CharField(null=True, unique=True)

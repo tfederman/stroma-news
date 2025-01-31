@@ -7,7 +7,7 @@ import peewee
 from bsky.client import Session
 from media.card import get_post
 from database import db
-from database.models import Article, ArticlePost, Fetch, ArticleMeta
+from database.models import Article, ArticlePost, FeedFetch, ArticleMeta
 
 
 def post_article(session, article):
@@ -35,11 +35,11 @@ if __name__ == "__main__":
     session = Session()
 
     articles = Article.select() \
-        .join(Fetch) \
+        .join(FeedFetch) \
         .join(ArticleMeta, on=(Article.id==ArticleMeta.article_id)) \
         .join(ArticlePost, peewee.JOIN.LEFT_OUTER, on=(ArticlePost.article_id==Article.id)) \
         .where(ArticlePost.id==None) \
-        .where(Fetch.timestamp >= datetime.now(UTC) - timedelta(hours=24)) \
+        .where(FeedFetch.timestamp >= datetime.now(UTC) - timedelta(hours=24)) \
         .order_by(peewee.fn.random())
 
     # keep within hourly rate limit (5000 points/hour @ 3 points/create)

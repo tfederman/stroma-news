@@ -8,7 +8,7 @@ import feedparser
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
 from database import db
-from database.models import Feed, Fetch, Article
+from database.models import Feed, FeedFetch, Article
 from media.meta import get_article_meta
 
 LATEST_DATE   = datetime.today() + timedelta(days=2)
@@ -18,7 +18,7 @@ ABSOLUTE_EARLIEST_DATE = datetime(2024, 1, 1)
 
 def fetch_feed(feed, last_fetch):
 
-    fetch = Fetch(feed=feed)
+    fetch = FeedFetch(feed=feed)
 
     kwargs = {}
 
@@ -118,7 +118,7 @@ def save_articles(fetch, fp, last_fetch):
         if len(articles) > 0:
             continue
 
-        article = Article(fetch=fetch, entry_id=entry.id)
+        article = Article(feed_fetch=fetch, entry_id=entry.id)
 
         for field in ["title","summary","author","link","updated","updated_parsed","published","published_parsed"]:
             setattr(article, field, getattr(entry, field, None))
@@ -139,7 +139,7 @@ def save_articles(fetch, fp, last_fetch):
 
 def get_last_fetch(feed):
     try:
-        return Fetch.select().where(Fetch.feed==feed).order_by(Fetch.timestamp.desc()).limit(1)[0]
+        return FeedFetch.select().where(FeedFetch.feed==feed).order_by(FeedFetch.timestamp.desc()).limit(1)[0]
     except IndexError as e:
         return None
 
@@ -150,9 +150,9 @@ def get_feeds_to_fetch(recent_fetch_hours=2, recent_fetch_content_days=4):
 
     # feeds to fetch = all_feeds - feeds fetched in last n hours - feeds without article published in last n days - feeds not updated in last n days
     all_feeds = set(Feed.select())
-    feeds_recently_fetched = set(Feed.select().join(Fetch).where(now - Fetch.timestamp < timedelta(hours=recent_fetch_hours)))
-    feeds_without_recent_published_article = set(Feed.select().join(Fetch).join(Article).where(now - Article.published_parsed > timedelta(days=recent_fetch_content_days)))
-    feeds_without_recent_update = set(Feed.select().join(Fetch).where(now - Fetch.updated_parsed > timedelta(days=recent_fetch_content_days)))
+    feeds_recently_fetched = set(Feed.select().join(FeedFetch).where(now - FeedFetch.timestamp < timedelta(hours=recent_fetch_hours)))
+    feeds_without_recent_published_article = set(Feed.select().join(FeedFetch).join(Article).where(now - Article.published_parsed > timedelta(days=recent_fetch_content_days)))
+    feeds_without_recent_update = set(Feed.select().join(FeedFetch).where(now - FeedFetch.updated_parsed > timedelta(days=recent_fetch_content_days)))
 
     feeds_to_fetch = all_feeds - feeds_recently_fetched - \
                         feeds_without_recent_published_article - \
@@ -172,10 +172,11 @@ if __name__=='__main__':
     # feeds = list(Feed.select().where(Feed.uri=="..."))
 
     # feeds that have never been fetched
-    # feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
+    # feeds = list(Feed.select().join(FeedFetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == FeedFetch.feed_id)).where(FeedFetch.id==None))
 
     feeds_to_fetch = get_feeds_to_fetch()
     feeds_to_fetch = feeds_to_fetch[:1000]
+    #feeds_to_fetch = list(Feed.select().order_by(peewee.fn.Random()))[:10]
 
     for n,feed in enumerate(feeds_to_fetch):
         print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1:04}/{len(feeds_to_fetch):04} {feed.uri}")
