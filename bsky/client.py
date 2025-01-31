@@ -43,7 +43,7 @@ class Session(object):
         ins = inspect.signature(func)
         _endpoint = ins.parameters["endpoint"].default
 
-        def inner(self, **kwargs):
+        def cursor_mgmt(self, **kwargs):
             endpoint = kwargs.get("endpoint", _endpoint)
             previous_cursor = BskyAPICursor.select().where(endpoint==endpoint).order_by(BskyAPICursor.timestamp.desc()).first()
             kwargs["cursor"] = previous_cursor.cursor if previous_cursor else ZERO_CURSOR
@@ -60,7 +60,7 @@ class Session(object):
 
             return response
 
-        return inner
+        return cursor_mgmt
 
 
     def create_session(self, method=SESSION_METHOD_CREATE):
@@ -174,7 +174,7 @@ class Session(object):
 
 
     @process_cursor
-    def get_convo_logs(self, endpoint="xrpc/chat.bsky.convo.getLog", cursor=None):
+    def get_convo_logs(self, endpoint="xrpc/chat.bsky.convo.getLog", cursor=ZERO_CURSOR):
         # usage notes: https://github.com/bluesky-social/atproto/issues/2760
         return self.get(hostname="api.bsky.chat", endpoint=endpoint, params={"cursor": cursor})
 

@@ -156,6 +156,8 @@ class ConvoMessage(BaseModel):
     sender = ForeignKeyField(BskyUserProfile)
     text = CharField()
     sent_at = DateTimeField()
+    received_at = DateTimeField(default=datetime.now)
+    processed_at = DateTimeField(null=True)
 
     class Meta:
         table_name = "convo_message"

@@ -105,7 +105,7 @@ def save_articles(fetch, fp, last_fetch):
             continue
 
         # limit feeds with very long history
-        if n >= 100:
+        if n >= 60:
             continue
 
         if not hasattr(entry, "id"):
@@ -166,7 +166,7 @@ if __name__=='__main__':
     if db.is_closed():
         db.connect()
 
-    feeds = list(Feed.select().order_by(peewee.fn.Random()))
+    # feeds = list(Feed.select().order_by(peewee.fn.Random()))
 
     # specific feed
     # feeds = list(Feed.select().where(Feed.uri=="..."))
@@ -175,6 +175,7 @@ if __name__=='__main__':
     # feeds = list(Feed.select().join(Fetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == Fetch.feed_id)).where(Fetch.id==None))
 
     feeds_to_fetch = get_feeds_to_fetch()
+    feeds_to_fetch = feeds_to_fetch[:1000]
 
     for n,feed in enumerate(feeds_to_fetch):
         print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1:04}/{len(feeds_to_fetch):04} {feed.uri}")
