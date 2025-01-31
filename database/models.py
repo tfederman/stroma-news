@@ -1,3 +1,5 @@
+import sys
+import inspect
 import os
 from datetime import datetime
 
@@ -171,11 +173,24 @@ def migrate_pgsql(cls, con):
     con.commit()
 
 
+def create_non_existing_tables(db):
+
+    class_members = inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    all_model_classes = [(n,cls) for n,cls in class_members if cls.__base__ == BaseModel]
+    missing_table_model_classes = [(n,cls) for n,cls in all_model_classes if not cls.table_exists()]
+
+    if not missing_table_model_classes:
+        print("All tables are already existing.")
+    else:
+        print(f"Creating missing tables: {', '.join(str(cls._meta.table_name) for n,cls in missing_table_model_classes)}")
+        db.create_tables([cls for n,cls in missing_table_model_classes])
+
+
 if __name__=="__main__":
     pass
 
-    # create the tables
-    # db.create_tables([BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta, BskyAPICursor])
+    # create new tables:
+    # create_non_existing_tables(db)
 
     # migrating sqlite data to postgres:
     # import psycopg2
