@@ -107,6 +107,15 @@ class ArticlePost(BaseModel):
         table_name = "article_post"
 
 
+class BskyAPICursor(BaseModel):
+    timestamp = DateTimeField(default=datetime.now)
+    endpoint = CharField()
+    cursor = CharField()
+
+    class Meta:
+        table_name = "bsky_api_cursor"
+
+
 def migrate_pgsql(cls, con):
     """Migrate the data from the current sqlite db into a postgresql db"""
     rows = list(cls.select().order_by(cls.id).tuples())
@@ -123,7 +132,7 @@ if __name__=="__main__":
     pass
 
     # create the tables
-    # db.create_tables([BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta])
+    # db.create_tables([BskySession, Feed, Fetch, Article, ArticlePost, ArticleMeta, BskyAPICursor])
 
     # migrating sqlite data to postgres:
     # import psycopg2
