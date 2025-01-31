@@ -11,8 +11,9 @@ from database import db
 from database.models import Feed, Fetch, Article
 from media.meta import get_article_meta
 
-EARLIEST_DATE = datetime.today() - timedelta(days=30)
 LATEST_DATE   = datetime.today() + timedelta(days=2)
+EARLIEST_DATE = datetime.today() - timedelta(days=30)
+ABSOLUTE_EARLIEST_DATE = datetime(2024, 1, 1)
 
 
 def fetch_feed(feed, last_fetch):
@@ -80,8 +81,9 @@ def fetch_feed(feed, last_fetch):
 def save_articles(fetch, fp, last_fetch):
 
     saved_articles = []
-    for entry in fp.entries:
+    for n,entry in enumerate(fp.entries):
 
+        # convert these fields to datetime objects
         for field in ["published_parsed","updated_parsed"]:
             try:
                 setattr(entry, field, datetime.fromtimestamp(mktime(getattr(entry, field))))
@@ -94,8 +96,17 @@ def save_articles(fetch, fp, last_fetch):
                 or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
                 or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
                 or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
-                # to do - log to file
+                # to do - log somewhere?
                 continue
+
+
+        # limit feeds with very long history
+        if entry.published_parsed and entry.published_parsed < ABSOLUTE_EARLIEST_DATE:
+            continue
+
+        # limit feeds with very long history
+        if n >= 100:
+            continue
 
         if not hasattr(entry, "id"):
             try:
@@ -147,7 +158,7 @@ def get_feeds_to_fetch(recent_fetch_hours=2, recent_fetch_content_days=4):
                         feeds_without_recent_published_article - \
                         feeds_without_recent_update
 
-    return feeds_to_fetch
+    return list(feeds_to_fetch)
 
 
 if __name__=='__main__':
