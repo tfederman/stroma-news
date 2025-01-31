@@ -90,6 +90,7 @@ class ArticleMetaCardy(BaseModel):
     image = CharField(null=True)
     description = CharField(null=True)
     timestamp = DateTimeField(default=datetime.now)
+    # add exception/status?
 
     class Meta:
         table_name = "article_meta_cardy"

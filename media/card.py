@@ -9,7 +9,7 @@ from database.models import ArticleMetaCardy
 def get_post(session, article):
 
     article.title = html_to_text(article.title)
-    embed = get_link_card_embed(session, article):
+    embed, cardy_lookup = get_link_card_embed(session, article)
 
     text = []
 
@@ -38,7 +38,7 @@ def get_post(session, article):
         "embed": embed,
     }
 
-    return post
+    return post, cardy_lookup
 
 
 def get_cardy_data(url):
@@ -60,6 +60,8 @@ def get_link_card_embed(session, article):
         img_url = None
         description = None
 
+    cardy_lookup = False
+
     if not img_url or not description:
 
         article_meta_cardy, created = ArticleMetaCardy.get_or_create(article=article)
@@ -69,6 +71,7 @@ def get_link_card_embed(session, article):
             description = article_meta_cardy.description
         else:
             cardy_data = get_cardy_data(article.link)
+            cardy_lookup = True
             img_url = cardy_data.get("image")
             description = cardy_data.get("description")
 
@@ -102,7 +105,7 @@ def get_link_card_embed(session, article):
     return {
         "$type": "app.bsky.embed.external",
         "external": card,
-    }
+    }, cardy_lookup
 
 def get_mimetype(url):
 
