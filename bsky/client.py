@@ -1,14 +1,16 @@
 import json
+import inspect
 from types import SimpleNamespace
 from datetime import datetime
 import requests
 
-from database.models import BskySession
-from .secrets import AUTH_USERNAME, AUTH_PASSWORD
+from database.models import BskySession, BskyAPICursor
+from bsky.secrets import AUTH_USERNAME, AUTH_PASSWORD
 
 HOSTNAME_ENTRYWAY = "bsky.social"
 AUTH_METHOD_PASSWORD, AUTH_METHOD_TOKEN = range(2)
 SESSION_METHOD_CREATE, SESSION_METHOD_REFRESH = range(2)
+ZERO_CURSOR = "2222222222222"
 
 """
 Usage:
@@ -135,3 +137,37 @@ class Session(object):
             "record": post,
         }
         return self.call(method=requests.post, endpoint="xrpc/com.atproto.repo.createRecord", params=params)
+
+
+    def process_cursor(func):
+
+        ins = inspect.signature(func)
+        _endpoint = ins.parameters["endpoint"].default
+
+        def inner(self, **kwargs):
+            endpoint = kwargs.get("endpoint", _endpoint)
+            previous_cursor = BskyAPICursor.select().where(endpoint==endpoint).order_by(BskyAPICursor.timestamp.desc()).first()
+            kwargs["cursor"] = previous_cursor.cursor if previous_cursor else ZERO_CURSOR
+            response = func(self, **kwargs)
+            try:
+                save_cursor = response.cursor
+                if previous_cursor and previous_cursor.cursor == save_cursor:
+                    # don't save a new cursor record if it hasn't changed
+                    pass
+                else:
+                    BskyAPICursor.create(endpoint=endpoint, cursor=save_cursor)
+            except AttributeError:
+                print(f"no cursor in response for {endpoint}")
+
+            return response
+
+        return inner
+
+    @process_cursor
+    def get_convo_logs(self, endpoint="xrpc/chat.bsky.convo.getLog", cursor=None):
+        return self.get(hostname="api.bsky.chat", endpoint=endpoint, params={"cursor": cursor})
+
+
+if __name__=="__main__":
+    s = Session()
+    s.get_convo_logs()
