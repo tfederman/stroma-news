@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from datetime import datetime
 import requests
 
-from database.models import BskySession, BskyAPICursor
+from database.models import BskySession, BskyAPICursor, BskyUserProfile
 from bsky.secrets import AUTH_USERNAME, AUTH_PASSWORD
 
 HOSTNAME_ENTRYWAY = "bsky.social"
@@ -33,6 +33,35 @@ class Session(object):
         except Exception as e:
             print(f"+++++++ NO SERIALIZED SESSION: {e} ++++++++++")
             self.create_session()
+
+
+    def process_cursor(func):
+        """Decorator for any api call that returns a cursor, this looks up the previous
+        cursor from the database, applies it to the call, and saves the newly returned
+        cursor to the database."""
+
+        ins = inspect.signature(func)
+        _endpoint = ins.parameters["endpoint"].default
+
+        def inner(self, **kwargs):
+            endpoint = kwargs.get("endpoint", _endpoint)
+            previous_cursor = BskyAPICursor.select().where(endpoint==endpoint).order_by(BskyAPICursor.timestamp.desc()).first()
+            kwargs["cursor"] = previous_cursor.cursor if previous_cursor else ZERO_CURSOR
+            response = func(self, **kwargs)
+            try:
+                save_cursor = response.cursor
+                if previous_cursor and previous_cursor.cursor == save_cursor:
+                    # don't save a new cursor record if it hasn't changed
+                    pass
+                else:
+                    BskyAPICursor.create(endpoint=endpoint, cursor=save_cursor)
+            except AttributeError:
+                print(f"no cursor in response for {endpoint}")
+
+            return response
+
+        return inner
+
 
     def create_session(self, method=SESSION_METHOD_CREATE):
 
@@ -128,7 +157,7 @@ class Session(object):
         return self.call(**kwargs)
 
     def upload_file(self, image_data, mimetype):
-        return self.call(method=requests.post, data=image_data, endpoint="xrpc/com.atproto.repo.uploadBlob", headers={"Content-Type": mimetype})
+        return self.post(data=image_data, endpoint="xrpc/com.atproto.repo.uploadBlob", headers={"Content-Type": mimetype})
 
     def create_record(self, post):
         params = {
@@ -136,38 +165,24 @@ class Session(object):
             "collection": "app.bsky.feed.post",
             "record": post,
         }
-        return self.call(method=requests.post, endpoint="xrpc/com.atproto.repo.createRecord", params=params)
+        return self.post(endpoint="xrpc/com.atproto.repo.createRecord", params=params)
 
 
-    def process_cursor(func):
+    def get_profile(self, actor):
+        endpoint = "xrpc/app.bsky.actor.getProfile"
+        return self.get(endpoint=endpoint, params={"actor": actor})
 
-        ins = inspect.signature(func)
-        _endpoint = ins.parameters["endpoint"].default
-
-        def inner(self, **kwargs):
-            endpoint = kwargs.get("endpoint", _endpoint)
-            previous_cursor = BskyAPICursor.select().where(endpoint==endpoint).order_by(BskyAPICursor.timestamp.desc()).first()
-            kwargs["cursor"] = previous_cursor.cursor if previous_cursor else ZERO_CURSOR
-            response = func(self, **kwargs)
-            try:
-                save_cursor = response.cursor
-                if previous_cursor and previous_cursor.cursor == save_cursor:
-                    # don't save a new cursor record if it hasn't changed
-                    pass
-                else:
-                    BskyAPICursor.create(endpoint=endpoint, cursor=save_cursor)
-            except AttributeError:
-                print(f"no cursor in response for {endpoint}")
-
-            return response
-
-        return inner
 
     @process_cursor
     def get_convo_logs(self, endpoint="xrpc/chat.bsky.convo.getLog", cursor=None):
+        # usage notes: https://github.com/bluesky-social/atproto/issues/2760
         return self.get(hostname="api.bsky.chat", endpoint=endpoint, params={"cursor": cursor})
 
 
 if __name__=="__main__":
     s = Session()
-    s.get_convo_logs()
+    # s.get_convo_logs()
+    # actor = "did:plc:5euo5vsiaqnxplnyug3k3art"
+    actor = "stroma-news.bsky.social"
+    user = BskyUserProfile.get_or_create_from_api(actor, s)
+    print(user.id)
