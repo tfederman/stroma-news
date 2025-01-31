@@ -84,6 +84,17 @@ class ArticleMeta(BaseModel):
         table_name = "article_meta"
 
 
+class ArticleMetaCardy(BaseModel):
+    article = ForeignKeyField(Article, unique=True)
+    title = CharField(null=True)
+    image = CharField(null=True)
+    description = CharField(null=True)
+    timestamp = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "article_meta_cardy"
+
+
 class ArticlePost(BaseModel):
     article = ForeignKeyField(Article, unique=True)
     posted_at = DateTimeField(default=datetime.now)

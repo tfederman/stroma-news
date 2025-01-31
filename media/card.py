@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import requests
 
 from utils.string import html_to_text
+from database.models import ArticleMetaCardy
 
 
 def get_post(session, article):
@@ -60,9 +61,22 @@ def get_link_card_embed(session, article):
         description = None
 
     if not img_url or not description:
-        cardy_data = get_cardy_data(article.link)
-        img_url = cardy_data.get("image")
-        description = cardy_data.get("description")
+
+        article_meta_cardy, created = ArticleMetaCardy.get_or_create(article=article)
+
+        if not created:
+            img_url = article_meta_cardy.image
+            description = article_meta_cardy.description
+        else:
+            cardy_data = get_cardy_data(article.link)
+            img_url = cardy_data.get("image")
+            description = cardy_data.get("description")
+
+            if cardy_data:
+                article_meta_cardy.title = cardy_data.get("title")
+                article_meta_cardy.description = description
+                article_meta_cardy.image = img_url
+                article_meta_cardy.save()
 
     if not description:
         description = html_to_text(article.summary)
