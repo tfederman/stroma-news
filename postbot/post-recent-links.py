@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, UTC
 
 import peewee
 
-from bsky.client import Session
+from bsky import session
 from media.card import get_post
 from database import db
 from database.models import Article, ArticlePost, FeedFetch, ArticleMeta
@@ -30,9 +30,6 @@ def post_article(session, article):
 
 
 if __name__ == "__main__":
-
-    db.connect()
-    session = Session()
 
     articles = Article.select() \
         .join(FeedFetch) \

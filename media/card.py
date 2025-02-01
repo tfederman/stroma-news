@@ -13,8 +13,8 @@ def get_post(session, article):
 
     text = []
 
-    if article.fetch.feed.title:
-        text.append(f'Feed: "{article.fetch.feed.title}"')
+    if article.feed_fetch.feed.title:
+        text.append(f'Feed: "{article.feed_fetch.feed.title}"')
 
     if article.author:
         article.author = article.author.replace("(noreply@blogger.com)", "").strip()

@@ -14,7 +14,7 @@ if __name__ == "__main__":
     article = Article.select().order_by(peewee.fn.random()).limit(1)[0]
 
     try:
-        post = get_post(session, article.fetch.feed.title,
+        post = get_post(session, article.feed_fetch.feed.title,
             article.title, article.link, article.summary,
             article.published_parsed, article.author)
         response = session.create_record(post)
