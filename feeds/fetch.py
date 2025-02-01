@@ -42,6 +42,12 @@ def fetch_feed(feed, last_fetch):
         fp = None
         http_duration = None
 
+    try:
+        if fp:
+            fetch.http_content_type = fp.http_content_type
+    except Exception as e:
+        print(f"content-type error: {e}")
+
     # update feed database record if there are new values of certain fields
     for f in ["title","subtitle","image_url"]:
         model_value = getattr(feed, f, None)
@@ -154,9 +160,10 @@ def get_feeds_to_fetch(recent_fetch_hours=2, recent_fetch_content_days=4):
     feeds_without_recent_published_article = set(Feed.select().join(FeedFetch).join(Article).where(now - Article.published_parsed > timedelta(days=recent_fetch_content_days)))
     feeds_without_recent_update = set(Feed.select().join(FeedFetch).where(now - FeedFetch.updated_parsed > timedelta(days=recent_fetch_content_days)))
 
-    feeds_to_fetch = all_feeds - feeds_recently_fetched - \
-                        feeds_without_recent_published_article - \
-                        feeds_without_recent_update
+    feeds_to_fetch = all_feeds \
+                        - feeds_recently_fetched \
+                        - feeds_without_recent_published_article \
+                        - feeds_without_recent_update
 
     return list(feeds_to_fetch)
 
@@ -189,6 +196,8 @@ if __name__=='__main__':
             continue
 
         saved_articles = save_articles(fetch, fp, last_fetch)
+
+        # based on date of most recent article, schedule the next fetch
 
         for article in saved_articles:
             get_article_meta(article)

@@ -31,6 +31,11 @@ class Feed(BaseModel):
     subtitle = CharField(null=True)
     site_href = CharField(null=True)
     image_url = CharField(null=True)
+    next_fetch_at = DateTimeField(null=True)
+
+    def reschedule_feed(self):
+        latest_article = Article.select().order_by(published_parsed).limit(1).first()
+
 
 
 class FeedFetch(BaseModel):
@@ -48,6 +53,7 @@ class FeedFetch(BaseModel):
     etag_sent = CharField(null=True)
     modified_sent = CharField(null=True)
     http_duration = DecimalField(null=True)
+    http_content_type = CharField(null=True)
 
     class Meta:
         table_name = "feed_fetch"
