@@ -36,6 +36,7 @@ if __name__ == "__main__":
         .join(ArticleMeta, on=(Article.id==ArticleMeta.article_id)) \
         .join(ArticlePost, peewee.JOIN.LEFT_OUTER, on=(ArticlePost.article_id==Article.id)) \
         .where(ArticlePost.id==None) \
+        .where(Article.published_parsed >= datetime.now(UTC) - timedelta(hours=72)) \
         .where(FeedFetch.timestamp >= datetime.now(UTC) - timedelta(hours=24)) \
         .order_by(peewee.fn.random())
 
