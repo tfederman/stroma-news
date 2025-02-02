@@ -32,6 +32,7 @@ class Feed(BaseModel):
     site_href = CharField(null=True)
     image_url = CharField(null=True)
     next_fetch_at = DateTimeField(null=True)
+    active = BooleanField(default=True)
 
     def reschedule_feed(self):
         latest_article = Article.select().order_by(published_parsed).limit(1).first()

@@ -7,7 +7,6 @@ import peewee
 import feedparser
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
-from database import db
 from database.models import Feed, FeedFetch, Article
 from media.meta import get_article_meta
 
@@ -150,12 +149,12 @@ def get_last_fetch(feed):
         return None
 
 
-def get_feeds_to_fetch(recent_fetch_hours=2, recent_fetch_content_days=4):
+def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=7):
 
     now = datetime.now(UTC)
 
     # feeds to fetch = all_feeds - feeds fetched in last n hours - feeds without article published in last n days - feeds not updated in last n days
-    all_feeds = set(Feed.select())
+    all_feeds = set(Feed.select().where(Feed.active==True)
     feeds_recently_fetched = set(Feed.select().join(FeedFetch).where(now - FeedFetch.timestamp < timedelta(hours=recent_fetch_hours)))
     feeds_without_recent_published_article = set(Feed.select().join(FeedFetch).join(Article).where(now - Article.published_parsed > timedelta(days=recent_fetch_content_days)))
     feeds_without_recent_update = set(Feed.select().join(FeedFetch).where(now - FeedFetch.updated_parsed > timedelta(days=recent_fetch_content_days)))
@@ -169,9 +168,6 @@ def get_feeds_to_fetch(recent_fetch_hours=2, recent_fetch_content_days=4):
 
 
 if __name__=='__main__':
-
-    if db.is_closed():
-        db.connect()
 
     # feeds = list(Feed.select().order_by(peewee.fn.Random()))
 
