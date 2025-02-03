@@ -149,7 +149,7 @@ def get_last_fetch(feed):
         return None
 
 
-def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=7):
+def get_feeds_to_fetch(recent_fetch_hours=3, recent_fetch_content_days=7):
 
     now = datetime.now(UTC)
 
@@ -178,7 +178,7 @@ if __name__=='__main__':
     # feeds = list(Feed.select().join(FeedFetch, peewee.JOIN.LEFT_OUTER, on=(Feed.id == FeedFetch.feed_id)).where(FeedFetch.id==None))
 
     feeds_to_fetch = get_feeds_to_fetch()
-    feeds_to_fetch = feeds_to_fetch[:1000]
+    #feeds_to_fetch = feeds_to_fetch[:1000]
     #feeds_to_fetch = list(Feed.select().order_by(peewee.fn.Random()))[:10]
 
     for n,feed in enumerate(feeds_to_fetch):

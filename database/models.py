@@ -5,6 +5,7 @@ from playhouse.postgres_ext import DateTimeTZField as DateTimeField
 
 from database import db
 from database.fields import PostgreSQLCharField as CharField
+from settings import log
 
 
 class BaseModel(Model):
@@ -163,7 +164,7 @@ class BskyUserProfile(BaseModel):
             try:
                 response = session.get_profile(actor)
             except Exception as e:
-                print(f"+++ EXCEPTION in BskyUserProfile.get_or_create_from_api: {e}")
+                log.error(f"+++ EXCEPTION in BskyUserProfile.get_or_create_from_api: {e}")
                 return None
 
             user, _ = BskyUserProfile.get_or_create(did=response.did, defaults={

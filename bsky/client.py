@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 
 from database.models import BskySession, BskyAPICursor, BskyUserProfile, BskyAPIResponseError
-from bsky.secrets import AUTH_USERNAME, AUTH_PASSWORD
+from settings import log, AUTH_USERNAME, AUTH_PASSWORD
 
 HOSTNAME_ENTRYWAY = "bsky.social"
 AUTH_METHOD_PASSWORD, AUTH_METHOD_TOKEN = range(2)
@@ -54,7 +54,7 @@ class Session(object):
                 else:
                     BskyAPICursor.create(endpoint=endpoint, cursor=save_cursor)
             except AttributeError:
-                print(f"No cursor in response for {endpoint}")
+                log.info(f"No cursor in response for {endpoint}")
 
             return response
 
@@ -65,10 +65,10 @@ class Session(object):
 
         try:
             if method == SESSION_METHOD_CREATE:
-                print(f"+++ Bluesky client session created from API")
+                log.info(f"+++ Bluesky client session created from API")
                 session = self.post(endpoint="xrpc/com.atproto.server.createSession", auth_method=AUTH_METHOD_PASSWORD)
             elif method == SESSION_METHOD_REFRESH:
-                print(f"+++ Bluesky client session refreshed from API")
+                log.info(f"+++ Bluesky client session refreshed from API")
                 session = self.post(endpoint="xrpc/com.atproto.server.refreshSession", use_refresh_token=True)
             self.exception = None
             self.accessJwt = session.accessJwt
@@ -81,7 +81,7 @@ class Session(object):
         self.created_at = datetime.now().isoformat()
 
         self.serialize()
-        print(json.dumps(self.__dict__, indent=4))
+        log.info(json.dumps(self.__dict__, indent=4))
 
         bs = BskySession(**self.__dict__)
         bs.save()
@@ -99,7 +99,7 @@ class Session(object):
         bs.save()
 
     def load_serialized_session(self):
-        print(f"+++ Bluesky client session instantiated from database cache")
+        log.info(f"+++ Bluesky client session instantiated from database cache")
         db_session = BskySession.select().order_by(BskySession.created_at.desc())[0]
         self.__dict__ = db_session.__dict__["__data__"]
         self.set_auth_header()
@@ -157,7 +157,7 @@ class Session(object):
                 http_status_code = getattr(r, "status_code", None),
                 response_text = getattr(r, "text", None),
             )
-            print(f"+++ SELECT * FROM bsky_api_response_error WHERE id={response_error.id};")
+            log.error(f"+++ SELECT * FROM bsky_api_response_error WHERE id={response_error.id};")
 
             if isinstance(call_exception, Exception):
                 raise call_exception
@@ -172,9 +172,9 @@ class Session(object):
             else:
                 return None
         except json.JSONDecodeError as e:
-            print(r.status_code)
-            print(r.text)
-            print(e)
+            log.error(r.status_code)
+            log.error(r.text)
+            log.error(e)
             raise
 
     def post(self, **kwargs):

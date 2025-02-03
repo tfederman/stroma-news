@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 import requests
 
+from settings import log
 from utils.string import html_to_text
 from database.models import ArticleMetaCardy
 
@@ -47,7 +48,7 @@ def get_cardy_data(url):
         assert r.status_code == 200, f"HTTP error getting cardy data: {r.status_code} - {r.text}"
         return r.json()
     except Exception as e:
-        print("+++ ERROR fetching cardy data:", e)
+        log.warning("+++ ERROR fetching cardy data:", e)
         return {}
 
 
@@ -100,7 +101,7 @@ def get_link_card_embed(session, article):
                 'size': upload_response.blob.size,
             }
         except Exception as e:
-            print("can't fetch image:", e)
+            log.warning("can't fetch image:", e)
 
     return {
         "$type": "app.bsky.embed.external",
