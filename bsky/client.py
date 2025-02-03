@@ -147,9 +147,7 @@ class Session(object):
                 call_exception = e
 
         if not r or getattr(r, "status_code", 0) != 200 or call_exception:
-            print(getattr(r, "text", "no r.text attribute"))
-            print("+++++++ CREATE +++++++++")
-            BskyAPIResponseError.create(
+            response_error = BskyAPIResponseError.create(
                 api_host = hostname,
                 endpoint = endpoint,
                 params = json.dumps(params),
@@ -161,9 +159,14 @@ class Session(object):
                 http_status_code = getattr(r, "status_code", None),
                 response_text = getattr(r, "text", None),
             )
+            print(f"+++ SELECT * FROM bsky_api_response_error WHERE id={response_error.id};")
 
-        assert r, "no response object"
-        assert r.status_code == 200, f"r.status_code: {r.status_code}"
+            if isinstance(call_exception, Exception):
+                raise call_exception
+            elif not r:
+                raise Exception(f"Failed request, no request object")
+            elif r.status_code != 200:
+                raise Exception(f"Failed request, status code {r.status_code}")
 
         try:
             if r.text:
