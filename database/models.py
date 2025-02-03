@@ -164,7 +164,7 @@ class BskyUserProfile(BaseModel):
             try:
                 response = session.get_profile(actor)
             except Exception as e:
-                log.error(f"+++ EXCEPTION in BskyUserProfile.get_or_create_from_api: {e}")
+                log.error(f"Exception in BskyUserProfile.get_or_create_from_api: {e.__class__.__name__} - {e}")
                 return None
 
             user, _ = BskyUserProfile.get_or_create(did=response.did, defaults={

@@ -65,10 +65,10 @@ class Session(object):
 
         try:
             if method == SESSION_METHOD_CREATE:
-                log.info(f"+++ Bluesky client session created from API")
+                log.info(f"Bluesky client session created from API")
                 session = self.post(endpoint="xrpc/com.atproto.server.createSession", auth_method=AUTH_METHOD_PASSWORD)
             elif method == SESSION_METHOD_REFRESH:
-                log.info(f"+++ Bluesky client session refreshed from API")
+                log.info(f"Bluesky client session refreshed from API")
                 session = self.post(endpoint="xrpc/com.atproto.server.refreshSession", use_refresh_token=True)
             self.exception = None
             self.accessJwt = session.accessJwt
@@ -99,7 +99,7 @@ class Session(object):
         bs.save()
 
     def load_serialized_session(self):
-        log.info(f"+++ Bluesky client session instantiated from database cache")
+        log.info(f"Bluesky client session instantiated from database cache")
         db_session = BskySession.select().order_by(BskySession.created_at.desc())[0]
         self.__dict__ = db_session.__dict__["__data__"]
         self.set_auth_header()
@@ -157,7 +157,7 @@ class Session(object):
                 http_status_code = getattr(r, "status_code", None),
                 response_text = getattr(r, "text", None),
             )
-            log.error(f"+++ SELECT * FROM bsky_api_response_error WHERE id={response_error.id};")
+            log.error(f"SELECT * FROM bsky_api_response_error WHERE id={response_error.id};")
 
             if isinstance(call_exception, Exception):
                 raise call_exception
@@ -172,9 +172,9 @@ class Session(object):
             else:
                 return None
         except json.JSONDecodeError as e:
-            log.error(r.status_code)
-            log.error(r.text)
-            log.error(e)
+            log.error(f"{r.status_code}")
+            log.error(f"{r.text}")
+            log.error(f"{e}")
             raise
 
     def post(self, **kwargs):

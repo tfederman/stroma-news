@@ -48,7 +48,7 @@ def get_cardy_data(url):
         assert r.status_code == 200, f"HTTP error getting cardy data: {r.status_code} - {r.text}"
         return r.json()
     except Exception as e:
-        log.warning("+++ ERROR fetching cardy data:", e)
+        log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {e}")
         return {}
 
 
@@ -101,7 +101,7 @@ def get_link_card_embed(session, article):
                 'size': upload_response.blob.size,
             }
         except Exception as e:
-            log.warning("can't fetch image:", e)
+            log.warning(f"can't fetch image: {e.__class__.__name__} - {e}")
 
     return {
         "$type": "app.bsky.embed.external",
