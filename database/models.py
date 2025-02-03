@@ -188,3 +188,45 @@ class ConvoMessage(BaseModel):
 
     class Meta:
         table_name = "convo_message"
+
+
+class UserFeedSubscription(BaseModel):
+    user = ForeignKeyField(BskyUserProfile)
+    feed = ForeignKeyField(Feed)
+    active = BooleanField(default=True)
+
+    class Meta:
+        table_name = "user_feed_subscription"
+
+
+class UserTextFilter(BaseModel):
+    user = ForeignKeyField(BskyUserProfile)
+    text = CharField()
+
+    class Meta:
+        table_name = "user_text_filter"
+
+"""
+users = list(BskyUserProfile.select())
+feeds = list(Feed.select().where(Feed.active==True))
+
+import random
+
+for user in users:
+    for n in range(random.randint(1,20)):
+        UserFeedSubscription.create(user=user, feed=random.choice(feeds))
+
+c = Counter()
+for user in users:
+    articles = Article.select() \
+                .join(FeedFetch) \
+                .join(Feed) \
+                .join(UserFeedSubscription) \
+                .join(ArticlePost, on=(Article.id==ArticlePost.article_id)) \
+                .where(UserFeedSubscription.user==user) \
+                .where(Feed.active==True) \
+                .where(UserFeedSubscription.active==True) \
+                .order_by(Article.published_parsed.desc())
+    c.update([len(articles)])
+
+"""
