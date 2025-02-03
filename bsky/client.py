@@ -27,12 +27,9 @@ session.post(hostname="api.bsky.app",  endpoint="xrpc/app.bsky.notification.upda
 class Session(object):
 
     def __init__(self):
-        # note - don't add class attributes that aren't json serializable
-        print(f"++++++++++ SESSION INSTANTIATED ++++++++++")
         try:
             self.load_serialized_session()
         except Exception as e:
-            print(f"+++++++ NO SERIALIZED SESSION: {e} ++++++++++")
             self.create_session()
 
 
@@ -57,7 +54,7 @@ class Session(object):
                 else:
                     BskyAPICursor.create(endpoint=endpoint, cursor=save_cursor)
             except AttributeError:
-                print(f"no cursor in response for {endpoint}")
+                print(f"No cursor in response for {endpoint}")
 
             return response
 
@@ -68,10 +65,10 @@ class Session(object):
 
         try:
             if method == SESSION_METHOD_CREATE:
-                print("++++++++++++ NEW SESSION ++++++++++++")
+                print(f"+++ Bluesky client session created from API")
                 session = self.post(endpoint="xrpc/com.atproto.server.createSession", auth_method=AUTH_METHOD_PASSWORD)
             elif method == SESSION_METHOD_REFRESH:
-                print("++++++++++++ REFRESH SESSION ++++++++++++")
+                print(f"+++ Bluesky client session refreshed from API")
                 session = self.post(endpoint="xrpc/com.atproto.server.refreshSession", use_refresh_token=True)
             self.exception = None
             self.accessJwt = session.accessJwt
@@ -102,6 +99,7 @@ class Session(object):
         bs.save()
 
     def load_serialized_session(self):
+        print(f"+++ Bluesky client session instantiated from database cache")
         db_session = BskySession.select().order_by(BskySession.created_at.desc())[0]
         self.__dict__ = db_session.__dict__["__data__"]
         self.set_auth_header()
