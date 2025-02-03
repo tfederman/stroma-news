@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from datetime import datetime
 import requests
 
-from database.models import BskySession, BskyAPICursor, BskyUserProfile
+from database.models import BskySession, BskyAPICursor, BskyUserProfile, BskyAPIResponseError
 from bsky.secrets import AUTH_USERNAME, AUTH_PASSWORD
 
 HOSTNAME_ENTRYWAY = "bsky.social"
@@ -28,6 +28,7 @@ class Session(object):
 
     def __init__(self):
         # note - don't add class attributes that aren't json serializable
+        print(f"++++++++++ SESSION INSTANTIATED ++++++++++")
         try:
             self.load_serialized_session()
         except Exception as e:
@@ -87,7 +88,11 @@ class Session(object):
 
         bs = BskySession(**self.__dict__)
         bs.save()
+        self.set_auth_header()
 
+
+    def set_auth_header(self):
+        self.auth_header = {"Authorization": f"Bearer {self.accessJwt}"}
 
     def refresh_session(self):
         self.create_session(method=SESSION_METHOD_REFRESH)
@@ -99,6 +104,7 @@ class Session(object):
     def load_serialized_session(self):
         db_session = BskySession.select().order_by(BskySession.created_at.desc())[0]
         self.__dict__ = db_session.__dict__["__data__"]
+        self.set_auth_header()
 
 
     def call(self, method=requests.get, hostname=HOSTNAME_ENTRYWAY, endpoint=None, auth_method=AUTH_METHOD_TOKEN, params=None, use_refresh_token=False, data=None, headers=None):
@@ -107,10 +113,10 @@ class Session(object):
 
         args = {}
         args["headers"] = headers or {}
+        args["headers"].update(self.auth_header)
+        params = params or {}
 
-        if auth_method == AUTH_METHOD_TOKEN and not use_refresh_token:
-            args["headers"].update({"Authorization": f"Bearer {self.accessJwt}"})
-        elif auth_method == AUTH_METHOD_TOKEN and use_refresh_token:
+        if auth_method == AUTH_METHOD_TOKEN and use_refresh_token:
             args["headers"].update({"Authorization": f"Bearer {self.refreshJwt}"})
         elif auth_method == AUTH_METHOD_PASSWORD:
             args["json"] = {"identifier": AUTH_USERNAME, "password": AUTH_PASSWORD}
@@ -125,16 +131,38 @@ class Session(object):
             else:
                 args["json"] = params
 
-        r = method(uri, **args)
-
-        if r.status_code == 400 and r.json()["error"] == "ExpiredToken":
-            self.refresh_session()
-            args["headers"]["Authorization"] = f"Bearer {self.accessJwt}"
+        try:
             r = method(uri, **args)
+            call_exception = None
+        except Exception as e:
+            r = None
+            call_exception = e
 
-        if r.status_code != 200:
-            print(r.text)
+        if Session.is_expired_token_response(r):
+            self.refresh_session()
+            try:
+                r = method(uri, **args)
+                call_exception = None
+            except Exception as e:
+                call_exception = e
 
+        if not r or getattr(r, "status_code", 0) != 200 or call_exception:
+            print(getattr(r, "text", "no r.text attribute"))
+            print("+++++++ CREATE +++++++++")
+            BskyAPIResponseError.create(
+                api_host = hostname,
+                endpoint = endpoint,
+                params = json.dumps(params),
+                method = method.__name__,
+                headers = json.dumps(args["headers"]),
+                auth_method = auth_method,
+                exception_class = call_exception.__class__.__name__ if call_exception else None,
+                exception_text = str(call_exception) if call_exception else None,
+                http_status_code = getattr(r, "status_code", None),
+                response_text = getattr(r, "text", None),
+            )
+
+        assert r, "no response object"
         assert r.status_code == 200, f"r.status_code: {r.status_code}"
 
         try:
@@ -155,6 +183,13 @@ class Session(object):
     def get(self, **kwargs):
         kwargs["method"] = requests.get
         return self.call(**kwargs)
+
+    @staticmethod
+    def is_expired_token_response(r):
+        try:
+            return r.status_code == 400 and r.json()["error"] == "ExpiredToken"
+        except:
+            return False
 
     def upload_file(self, image_data, mimetype):
         return self.post(data=image_data, endpoint="xrpc/com.atproto.repo.uploadBlob", headers={"Content-Type": mimetype})
@@ -180,7 +215,7 @@ class Session(object):
 
 
 if __name__=="__main__":
-    s = Session()
+    from bsky import session
     # s.get_convo_logs()
     # actor = "did:plc:5euo5vsiaqnxplnyug3k3art"
     actor = "stroma-news.bsky.social"

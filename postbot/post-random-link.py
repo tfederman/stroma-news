@@ -1,14 +1,11 @@
 import peewee
 
-from bsky.client import Session
+from bsky import session
 from media.card import get_post
 from database import db
 from database.models import Article, ArticlePost
 
 if __name__ == "__main__":
-
-    db.connect()
-    session = Session()
 
     #article = Article.select().where(Article.link=="https://www.theatlantic.com/culture/archive/2025/01/fka-twigs-eusexua-review/681490/?utm_source=feed").order_by(peewee.fn.random()).limit(1)[0]
     article = Article.select().order_by(peewee.fn.random()).limit(1)[0]

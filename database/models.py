@@ -123,10 +123,28 @@ class BskyAPICursor(BaseModel):
         table_name = "bsky_api_cursor"
 
 
+class BskyAPIResponseError(BaseModel):
+
+    timestamp = DateTimeField(default=datetime.now)
+    api_host = CharField()
+    endpoint = CharField()
+    params = CharField(null=True)
+    method = CharField()
+    headers = CharField(null=True)
+    auth_method = CharField()
+    http_status_code = IntegerField(null=True)
+    exception_class = CharField(null=True)
+    exception_text = CharField(null=True)
+    response_text = CharField(null=True)
+
+    class Meta:
+        table_name = "bsky_api_response_error"
+
+
 class BskyUserProfile(BaseModel):
     did = CharField(unique=True)
     handle = CharField(unique=True)
-    display_name = CharField()
+    display_name = CharField(null=True)
     viewer_muted = BooleanField()
     viewer_blocked = BooleanField()
 
@@ -142,11 +160,15 @@ class BskyUserProfile(BaseModel):
                 return BskyUserProfile.get(BskyUserProfile.handle==actor)
         except BskyUserProfile.DoesNotExist:
 
-            response = session.get_profile(actor)
+            try:
+                response = session.get_profile(actor)
+            except Exception as e:
+                print(f"+++ EXCEPTION in BskyUserProfile.get_or_create_from_api: {e}")
+                return None
 
             user, _ = BskyUserProfile.get_or_create(did=response.did, defaults={
                 "handle": response.handle,
-                "display_name": response.displayName,
+                "display_name": getattr(response, "displayName", None),
                 "viewer_muted": response.viewer.muted,
                 "viewer_blocked": response.viewer.blockedBy,
             })
