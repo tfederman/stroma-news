@@ -18,4 +18,4 @@ try:
     AUTH_PASSWORD = os.environ["BSKY_AUTH_PASSWORD"]
 except KeyError:
     log.critical("bsky credentials must be set in BSKY_AUTH_USERNAME and BSKY_AUTH_PASSWORD environment variables")
-    exit(1)
+    raise

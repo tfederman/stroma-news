@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 from database import db
 from database.models import *
+from utils.string import html_to_text
 
 headers = {
      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.3",
@@ -44,7 +45,10 @@ def get_article_meta(article):
 
         for k,v in tags.items():
             try:
-                setattr(article_meta, k, v(bs))
+                val = v(bs)
+                if "description" in k:
+                    val = html_to_text(val)
+                setattr(article_meta, k, val)
             except Exception as e:
                 pass
 
