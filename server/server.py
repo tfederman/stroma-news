@@ -20,4 +20,10 @@ to update function code:
 
 to update function config:
 - aws lambda update-function-configuration --function-name bsky_server --handler server.lambda_handler
+
+to create a function:
+aws lambda create-function --function-name bsky_xxx \
+--runtime python3.13 --handler server.lambda_handler \
+--role arn:xxx \
+--zip-file fileb://bsky.zip
 """
