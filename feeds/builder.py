@@ -36,6 +36,16 @@ if __name__ == "__main__":
                             .limit(48)
 
         feed_json = get_feed_json(article_posts)
+        try:
+            feed_json_prior = open(f"feed-json/{user}.json").read()
+        except FileNotFoundError:
+            feed_json_prior = ""
+
+        # don't rewrite unchanged files because the changed timestamp will slow
+        # down s3 sync as the unchanged content will get be re-uploaded
+        if feed_json == feed_json_prior:
+            continue
+
         with open(f"feed-json/{user}.json", "w") as f:
             f.write(feed_json)
 
@@ -44,5 +54,5 @@ if __name__ == "__main__":
         # client.put_object(Body=feed_json, Bucket="stroma-news", Key=f"feed-json/{user}.json")
 
     print("sync files...")
-    cmd = ["aws", "--quiet", "s3", "sync", "./feed-json/", "s3://stroma-news/feed-json/"]
+    cmd = ["aws", "s3", "sync", "./feed-json/", "s3://stroma-news/feed-json/"]
     subprocess.check_call(cmd)
