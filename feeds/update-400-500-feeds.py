@@ -1,5 +1,6 @@
 from peewee import fn
 
+from settings import log
 from database.models import Feed, FeedFetch
 
 
@@ -25,6 +26,6 @@ if __name__=="__main__":
         feed_to_update = Feed.select().where(Feed.id==error_feed_id).where(Feed.active==True).first()
 
         if feed_to_update:
-            print(f"Setting feed #{feed_to_update.id} inactive for status {status} ({count}) ({feed_to_update.uri})")
+            log.info(f"Setting feed #{feed_to_update.id} inactive for status {status} ({count}) ({feed_to_update.uri})")
             feed_to_update.active = False
             feed_to_update.save()
