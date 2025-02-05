@@ -7,6 +7,7 @@ import peewee
 import feedparser
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
+from settings import log
 from database.models import Feed, FeedFetch, Article
 from media.meta import get_article_meta
 
@@ -35,9 +36,8 @@ def fetch_feed(feed, last_fetch):
         t2 = time()
         http_duration = t2 - t1
     except Exception as e:
-        fetch.exception = f"{type(e)} - {str(e)}"
-        # log to database
-        print(fetch.exception)
+        fetch.exception = f"{e.__class__.__name__} - {e}"
+        log.error(fetch.exception)
         fp = None
         http_duration = None
 
@@ -45,7 +45,11 @@ def fetch_feed(feed, last_fetch):
         if fp:
             fetch.http_content_type = fp.http_content_type
     except Exception as e:
-        print(f"content-type error: {e}")
+        log.warning(f"content-type missing from feed: {e}")
+
+    bozo_exception = getattr(fp, "bozo_exception", None)
+    if isinstance(bozo_exception, Exception):
+        fetch.bozo_exception = f"{bozo_exception.__class__.__name__} - {bozo_exception}"
 
     # update feed database record if there are new values of certain fields
     for f in ["title","subtitle","image_url"]:
@@ -64,7 +68,8 @@ def fetch_feed(feed, last_fetch):
         if link_href and link_href != feed.site_href:
             feed.site_href = link_href
     except Exception as e:
-        pass
+        fetch.exception = f"{e.__class__.__name__} - {e}"
+        log.error(fetch.exception)
 
     if feed.is_dirty():
         feed.save()
@@ -149,7 +154,7 @@ def get_last_fetch(feed):
         return None
 
 
-def get_feeds_to_fetch(recent_fetch_hours=3, recent_fetch_content_days=7):
+def get_feeds_to_fetch(recent_fetch_hours=3, recent_fetch_content_days=14):
 
     now = datetime.now(UTC)
 
@@ -182,7 +187,7 @@ if __name__=='__main__':
     #feeds_to_fetch = list(Feed.select().order_by(peewee.fn.Random()))[:10]
 
     for n,feed in enumerate(feeds_to_fetch):
-        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {n+1:04}/{len(feeds_to_fetch):04} {feed.uri}")
+        log.info(f"{n+1:04}/{len(feeds_to_fetch):04} {feed.uri}")
 
         last_fetch = get_last_fetch(feed)
 
@@ -199,4 +204,4 @@ if __name__=='__main__':
             get_article_meta(article)
 
         if saved_articles:
-            print(f"status {getattr(fp, 'status', '???')}, {len(saved_articles)} articles saved")
+            log.info(f"status {getattr(fp, 'status', '???')}, {len(saved_articles)} articles saved")
