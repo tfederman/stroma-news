@@ -26,6 +26,8 @@ if __name__ == "__main__":
                         .order_by(UserFeedSubscription.user) \
                         .namedtuples()
 
+    updated_files = 0
+
     for user, feeds in groupby(subscriptions, lambda row: row.did):
         article_posts = ArticlePost.select(ArticlePost.uri) \
                             .join(Article) \
@@ -35,9 +37,12 @@ if __name__ == "__main__":
                             .order_by(Article.published_parsed.desc()) \
                             .limit(48)
 
+        did_minus_prefix = user.replace("did:plc:", "")
+        filename = f"feed-json/{did_minus_prefix}.json"
+
         feed_json = get_feed_json(article_posts)
         try:
-            feed_json_prior = open(f"feed-json/{user}.json").read()
+            feed_json_prior = open(filename).read()
         except FileNotFoundError:
             feed_json_prior = ""
 
@@ -46,13 +51,16 @@ if __name__ == "__main__":
         if feed_json == feed_json_prior:
             continue
 
-        with open(f"feed-json/{user}.json", "w") as f:
+        with open(filename, "w") as f:
             f.write(feed_json)
+            updated_files += 1
 
         # much too slow
         # client = boto3.client('s3')
         # client.put_object(Body=feed_json, Bucket="stroma-news", Key=f"feed-json/{user}.json")
 
-    print("sync files...")
-    cmd = ["aws", "s3", "sync", "./feed-json/", "s3://stroma-news/feed-json/"]
+
+    log.info(f"{updated_files} files updated")
+    log.info("syncing files to s3...")
+    cmd = ["aws", "--quiet", "s3", "sync", "./feed-json/", "s3://stroma-news/feed-json/"]
     subprocess.check_call(cmd)
