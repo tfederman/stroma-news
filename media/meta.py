@@ -24,8 +24,9 @@ headers = {
      "Sec-GPC": "1"
 }
 
-def get_article_meta(article):
+def get_article_meta(article_id):
 
+    article = Article.get(Article.id==article_id)
     article_meta, _ = ArticleMeta.get_or_create(article=article)
 
     try:
@@ -60,7 +61,7 @@ def get_article_meta(article):
             pass
 
     article_meta.save()
-    return article_meta
+    return article_meta.id
 
 
 if __name__=="__main__":
@@ -68,5 +69,5 @@ if __name__=="__main__":
     articles = Article.select().where(Article.link ** 'http%').order_by(peewee.fn.Random()).limit(20)
     for n,article in enumerate(articles):
         print(n, article.link)
-        article_meta = get_article_meta(article)
+        article_meta = get_article_meta(article.id)
         time.sleep(0.1)
