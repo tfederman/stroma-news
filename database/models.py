@@ -56,6 +56,7 @@ class FeedFetch(BaseModel):
     modified_sent = CharField(null=True)
     http_duration = DecimalField(null=True)
     http_content_type = CharField(null=True)
+    bozo_exception = CharField(null=True)
 
     class Meta:
         table_name = "feed_fetch"
@@ -186,6 +187,7 @@ class ConvoMessage(BaseModel):
     sent_at = DateTimeField()
     received_at = DateTimeField(default=datetime.now)
     processed_at = DateTimeField(null=True)
+    process_error = CharField(null=True)
 
     class Meta:
         table_name = "convo_message"
