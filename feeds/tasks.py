@@ -47,9 +47,6 @@ def fetch_feed_task(feed):
         log.error(fetch.exception)
         fp = None
         http_duration = None
-        job = get_current_job()
-        job.meta['skip'] = True
-        job.save_meta()
 
     try:
         if fp:
@@ -60,9 +57,18 @@ def fetch_feed_task(feed):
     bozo_exception = getattr(fp, "bozo_exception", None)
     if isinstance(bozo_exception, Exception):
         fetch.bozo_exception = f"{bozo_exception.__class__.__name__} - {bozo_exception}"
+        log.error(f"bozo exception for {feed.uri}: {fetch.bozo_exception}")
+
+
+    # signal the following async job to skip itself. it's already been queued at this point.
+    bozo_exception = fetch.bozo_exception or ""
+    if fp is None or getattr(fp, "status", 999) >= 400 \
+            or "SAXParseException" in bozo_exception \
+            or "URLError" in bozo_exception:
         job = get_current_job()
         job.meta['skip'] = True
         job.save_meta()
+
 
     # update feed database record if there are new values of certain fields
     for f in ["title","subtitle","image_url"]:

@@ -8,7 +8,7 @@ from database.models import Feed, FeedFetch, Article
 from feeds.tasks import *
 
 
-def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=30):
+def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=14):
 
     now = datetime.now(UTC)
 
