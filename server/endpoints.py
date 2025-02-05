@@ -1,21 +1,32 @@
 import os
 import json
 
-from feed import FEEDS, placeholder_feed_items
+from feed import FEEDS, get_feed_items
 from auth import get_user_did
 from util import response
 
 CUSTOM_FEED_HOSTNAME = os.environ["CUSTOM_FEED_HOSTNAME"]
 
+DEFAULT_DID = "did:plc:5euo5vsiaqnxplnyug3k3art"
+DEFAULT_FEED = FEEDS[0]["uri"]
+
 
 def get_feed_skeleton(event):
 
-    try:
-        iss_did = get_user_did(event["headers"]["authorization"])
-    except Exception as e:
-        iss_did = str(e)
+    feed_id = event.get("queryStringParameters", {}).get("feed", DEFAULT_FEED)
+    short_feed_id = feed_id.split("/")[-1]
 
-    feed = placeholder_feed_items()
+    try:
+        did = get_user_did(event["headers"]["authorization"])
+        default_fault = True
+    except Exception as e:
+        print("+++ get_user_did exception: {e}")
+        did = DEFAULT_DID
+        default_did = True
+
+    print(f"+++ feed {short_feed_id}, did {did} {'(default)' if default_did else ''}")
+
+    feed = get_feed_items()
 
     return {
         'statusCode': 200,

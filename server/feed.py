@@ -1,28 +1,53 @@
+import json
+
+import boto3
+
 FEEDS = [
-    {'uri': f'at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/tmf-test'},
     {'uri': f'at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-test'},
+    {'uri': f'at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/tmf-test'},
 ]
+
+def get_s3_object(did):
+
+    short_did = did.replace("did:plc:", "")
+
+    bucket = "stroma-news"
+    key = f"feed-json/{short_did}.json"
+    print(f"+++ key: {key}")
+
+    s3 = boto3.client('s3')
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    return json.loads(obj['Body'].read())
+
+
+def get_feed_items(did):
+    try:
+        return get_s3_object(did)
+    except Exception as e:
+        print(f"+++ s3_test_feed_items exception: {e}")
+        return placeholder_feed_items()
+
 
 def placeholder_feed_items():
     return {'cursor': 'cursor',
             'feed': [
-              {'post': 'at://did:plc:jlqdua2q6aaes34dssihqr6c/app.bsky.feed.post/3lfsufvipvk2j'},
-              {'post': 'at://did:plc:yvpt5qzlmqze75i4u33to6fc/app.bsky.feed.post/3lfsufbk7bs2u'},
-              {'post': 'at://did:plc:5fqztrjgcadphjfkisukyxwf/app.bsky.feed.post/3lfsues6b3s2k'},
-              {'post': 'at://did:plc:mc6ui7nl4j3gyo2y4ghnfbuu/app.bsky.feed.post/3lfstszugsk2d'},
-              {'post': 'at://did:plc:dudmosww4zd55uhwfumm3rvx/app.bsky.feed.post/3lfstsedzj224'},
-              {'post': 'at://did:plc:xbejiddbjwvsbkawr4tdznu7/app.bsky.feed.post/3lfstoo5sb22b'},
-              {'post': 'at://did:plc:y4kkeagjcv2pmvoxtty6thok/app.bsky.feed.post/3lfstnhsqn22e'},
-              {'post': 'at://did:plc:assxsi3vx5jqbmmi2ojt4agg/app.bsky.feed.post/3lfstml2kds2f'},
-              {'post': 'at://did:plc:pum3osxh3ckvalvbert3tzch/app.bsky.feed.post/3lfstimflz223'},
-              {'post': 'at://did:plc:e52cldybje7o4jac3nqmucje/app.bsky.feed.post/3lfsthvtgn22c'},
-              {'post': 'at://did:plc:lsxxfbr3khwl2efrrflgqegj/app.bsky.feed.post/3lfstfzwks22s'},
-              {'post': 'at://did:plc:2otdf4y4bnk3dbutg5nwdooy/app.bsky.feed.post/3lfstexxllk2q'},
-              {'post': 'at://did:plc:pnmhg5qpidpc7u6ziqauxkxi/app.bsky.feed.post/3lfst5ykpw22f'},
-              {'post': 'at://did:plc:ckganlbacytb5ldpmh65o5ov/app.bsky.feed.post/3lfssyf7dr22l'},
-              {'post': 'at://did:plc:fy6uomcu2u36np5nkt2k33rc/app.bsky.feed.post/3lfssy6coac2b'},
-              {'post': 'at://did:plc:ombr5w3p4l52xjn47fsf5zcw/app.bsky.feed.post/3lfssxrj2ss2j'},
-              {'post': 'at://did:plc:ckganlbacytb5ldpmh65o5ov/app.bsky.feed.post/3lfssoyzj222l'},
-              {'post': 'at://did:plc:jblnpflw3y765qatl66w4yqd/app.bsky.feed.post/3lfssoted6s25'},
-              {'post': 'at://did:plc:j5hvy7pbjqrzejrmazar6dn3/app.bsky.feed.post/3lfssnxtfqc2k'},
-              {'post': 'at://did:plc:ndnnx5tn72zi5e7ejb4u3fwa/app.bsky.feed.post/3lfsskxis6k2b'}]}
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3lh37fys3fo2a'},
+                {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3lh22fx5vr22s'},
+                {'post': 'at://did:plc:62h2n5ftyykdyyglbru4sjpd/app.bsky.feed.post/3lc3so7vffc2f'},
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3lgjm5jhofl2d'},
+                {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3lginnuwwrk24'},
+                {'post': 'at://did:plc:62h2n5ftyykdyyglbru4sjpd/app.bsky.feed.post/3lbk47jf3z22m'},
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3lfxyv2qsl42q'},
+                {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3lfxa23kqpk27'},
+                {'post': 'at://did:plc:62h2n5ftyykdyyglbru4sjpd/app.bsky.feed.post/3layhj27cds2s'},
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3lfgfmnhno52a'},
+                {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3lffalrvzns2i'},
+                {'post': 'at://did:plc:62h2n5ftyykdyyglbru4sjpd/app.bsky.feed.post/3l42l6lhxcy2z'},
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3leuse6ydyr2e'},
+                {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3leuntfevsk2u'},
+                {'post': 'at://did:plc:62h2n5ftyykdyyglbru4sjpd/app.bsky.feed.post/3l3ienxoous2s'},
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3led73r5asg2y'},
+                {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3ledknbz3wc2m'},
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3ldrltesgy52s'},
+                {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3ldqgyvcyvs2b'},
+                {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3ld7ykuvhow2m'}]}
