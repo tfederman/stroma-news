@@ -20,7 +20,7 @@ def get_s3_object(did):
     return json.loads(obj['Body'].read())
 
 
-def get_feed_items(did):
+def get_feed_items(feed, did):
     try:
         return get_s3_object(did)
     except Exception as e:

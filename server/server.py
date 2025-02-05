@@ -1,16 +1,22 @@
 from endpoints import *
+from sqs import send_sqs_failure
 
 dispatch_map = {
     '/xrpc/app.bsky.feed.describeFeedGenerator': describe_feed_generator,
     '/.well-known/did.json': did_json,
     '/event': event_json,
     '/xrpc/app.bsky.feed.getFeedSkeleton': get_feed_skeleton,
-    'default': default,
+    '/failure': failure,
+    '/default': default,
 }
 
 def lambda_handler(event, context):
-    path = event.get('rawPath') or 'default'
-    return dispatch_map.get(path, default)(event)
+    try:
+        path = event.get('rawPath') or '/default'
+        return dispatch_map.get(path, default)(event)
+    except Exception as e:
+        send_sqs_failure(f"{e.__class__.__name__} - {e}")
+        return default(event, ".")
 
 """
 Notes:

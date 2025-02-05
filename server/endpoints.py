@@ -4,11 +4,16 @@ import json
 from feed import FEEDS, get_feed_items
 from auth import get_user_did
 from util import response
+from sqs import send_sqs_success
 
 CUSTOM_FEED_HOSTNAME = os.environ["CUSTOM_FEED_HOSTNAME"]
 
 DEFAULT_DID = "did:plc:5euo5vsiaqnxplnyug3k3art"
 DEFAULT_FEED = FEEDS[0]["uri"]
+
+
+def failure(event):
+    raise Exception("simulated exception")
 
 
 def get_feed_skeleton(event):
@@ -18,15 +23,17 @@ def get_feed_skeleton(event):
 
     try:
         did = get_user_did(event["headers"]["authorization"])
-        default_fault = True
+        default_did = False
     except Exception as e:
-        print("+++ get_user_did exception: {e}")
+        print(f"+++ get_user_did exception: {e.__class__.__name__} - {e}")
         did = DEFAULT_DID
         default_did = True
 
-    print(f"+++ feed {short_feed_id}, did {did} {'(default)' if default_did else ''}")
+    print(f"+++ feed: {short_feed_id}, did: {did}{' (default)' if default_did else ''}")
 
-    feed = get_feed_items()
+    feed = get_feed_items(short_feed_id, did)
+    post_count = len(feed["feed"])
+    send_sqs_success(short_feed_id, did, post_count)
 
     return {
         'statusCode': 200,
@@ -53,5 +60,5 @@ def did_json(event):
 def event_json(event):
     return response(event)
 
-def default(event):
-    return response({'statusCode': 200, 'body': f'Stroma feed generator'})
+def default(event, suffix=""):
+    return response({'statusCode': 200, 'body': f'Stroma feed generator{suffix}'})
