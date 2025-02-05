@@ -39,7 +39,6 @@ class Feed(BaseModel):
         latest_article = Article.select().order_by(published_parsed).limit(1).first()
 
 
-
 class FeedFetch(BaseModel):
     feed = ForeignKeyField(Feed)
     version = CharField(null=True)
@@ -57,6 +56,7 @@ class FeedFetch(BaseModel):
     http_duration = DecimalField(null=True)
     http_content_type = CharField(null=True)
     bozo_exception = CharField(null=True)
+    articles_saved = IntegerField()
 
     class Meta:
         table_name = "feed_fetch"
