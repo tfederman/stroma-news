@@ -18,7 +18,11 @@ def failure(event):
 
 def get_feed_skeleton(event):
 
-    feed_id = event.get("queryStringParameters", {}).get("feed", DEFAULT_FEED)
+    params = event.get("queryStringParameters", {})
+    feed_id = params.get("feed", DEFAULT_FEED)
+    cursor = params.get("cursor")
+    limit = int(params.get("limit") or 24)
+
     short_feed_id = feed_id.split("/")[-1]
 
     try:
@@ -29,11 +33,11 @@ def get_feed_skeleton(event):
         did = DEFAULT_DID
         default_did = True
 
-    print(f"+++ feed: {short_feed_id}, did: {did}{' (default)' if default_did else ''}")
+    print(f"+++ feed: {short_feed_id}, limit: {limit}, cursor: {cursor}, did: {did}{' (default)' if default_did else ''}")
 
-    feed = get_feed_items(short_feed_id, did)
-    post_count = len(feed["feed"])
-    send_sqs_success(short_feed_id, did, post_count)
+    feed = get_feed_items(short_feed_id, did, limit, cursor)
+    items_sent = len(feed["feed"])
+    send_sqs("success", short_feed_id, limit, cursor, did, items_sent)
 
     return {
         'statusCode': 200,

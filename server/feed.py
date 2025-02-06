@@ -2,34 +2,66 @@ import json
 
 import boto3
 
+EOF_CURSOR = "eof"
+
 FEEDS = [
     {'uri': f'at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-test'},
     {'uri': f'at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/tmf-test'},
 ]
 
-def get_s3_object(did):
+def get_s3_object(did, limit, cursor):
+
+    if cursor == EOF_CURSOR:
+        return {"cursor": cursor, "feed": []}
 
     short_did = did.replace("did:plc:", "")
 
     bucket = "stroma-news"
     key = f"feed-json/{short_did}.json"
-    print(f"+++ key: {key}")
 
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=bucket, Key=key)
-    return json.loads(obj['Body'].read())
+    j = json.loads(obj['Body'].read())
 
+    limit = limit or 24
 
-def get_feed_items(feed, did):
     try:
-        return get_s3_object(did)
+        cursor = cursor or 0
+        cursor = int(cursor)
+    except ValueError:
+        cursor = 0
+
+    feed_items = []
+    new_cursor = 0
+
+    for item in j["feed"]:
+        if not cursor:
+            feed_items.append({"post": item["post"]})
+            new_cursor = item["cursor"]
+        elif item["cursor"] < cursor:
+            feed_items.append({"post": item["post"]})
+            new_cursor = item["cursor"]
+
+        if len(feed_items) >= limit:
+            break
+
+    if not feed_items:
+        new_cursor = EOF_CURSOR
+
+    feed = {"cursor": str(new_cursor), "feed": feed_items}
+    return feed
+
+
+def get_feed_items(feed, did, limit, cursor):
+    try:
+        return get_s3_object(did)[:limit]
     except Exception as e:
         print(f"+++ s3_test_feed_items exception: {e}")
-        return placeholder_feed_items()
+        return placeholder_feed_items()[:limit]
 
 
 def placeholder_feed_items():
-    return {'cursor': 'cursor',
+    return {'cursor': EOF_CURSOR,
             'feed': [
                 {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3lh37fys3fo2a'},
                 {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3lh22fx5vr22s'},
@@ -51,3 +83,8 @@ def placeholder_feed_items():
                 {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3ldrltesgy52s'},
                 {'post': 'at://did:plc:uch7nbvmh452xplkgonrjd27/app.bsky.feed.post/3ldqgyvcyvs2b'},
                 {'post': 'at://did:plc:zcmchxw2gxlbincrchpdjopq/app.bsky.feed.post/3ld7ykuvhow2m'}]}
+
+
+if __name__=="__main__":
+    feed = get_s3_object("msleiqq55klucvzm33gdtjje", 8, "eof")
+    print(json.dumps(feed, indent=4))
