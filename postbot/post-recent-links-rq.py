@@ -5,14 +5,14 @@ from rq import Queue
 import peewee
 
 from bsky import session
-from settings import log
+from settings import log, QUEUE_NAME_POST
 from database.models import Article, ArticlePost, FeedFetch, ArticleMeta
 from postbot.post import post_article
 
 
 if __name__ == "__main__":
 
-    q = Queue(connection=Redis())
+    q = Queue(QUEUE_NAME_POST, connection=Redis())
 
     articles = Article.select() \
         .join(FeedFetch) \
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     #exit(0)
 
     # keep within hourly rate limit (5000 points/hour @ 3 points/create)
-    articles = articles[:1600]
+    articles = articles[:400]
 
     for n,article in enumerate(articles):
         log.info(f"{n+1}/{len(articles)} - {article.id} - {article.title}")

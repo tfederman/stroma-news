@@ -19,3 +19,8 @@ try:
 except KeyError:
     log.critical("bsky credentials must be set in BSKY_AUTH_USERNAME and BSKY_AUTH_PASSWORD environment variables")
     raise
+
+
+QUEUE_NAME_FETCH = "fetch"
+QUEUE_NAME_POST  = "post"
+QUEUE_NAME_MISC  = "misc"

@@ -111,6 +111,7 @@ class ArticlePost(BaseModel):
     post_id = CharField(null=True)
     exception = CharField(null=True)
     uri = CharField(null=True)
+    remote_metadata_lookup = BooleanField()
 
     class Meta:
         table_name = "article_post"

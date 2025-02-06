@@ -19,7 +19,6 @@ session.get(hostname="api.bsky.chat",  endpoint="xrpc/chat.bsky.convo.getConvo",
 session.get(hostname="api.bsky.chat",  endpoint="xrpc/chat.bsky.convo.getMessages", params={"convoId": convo.id})
 session.post(hostname="api.bsky.chat", endpoint="xrpc/chat.bsky.convo.sendMessage", params={"convoId": convo.id, "message": {"text": "message text"}})
 session.get(hostname="api.bsky.chat", endpoint="xrpc/chat.bsky.convo.getLog", params={"cursor": "2222222tc2d5v"})
-
 session.get(hostname="api.bsky.app",  endpoint="xrpc/app.bsky.notification.listNotifications", params={"cursor": "2024-07-09T00:37:17.385Z"})
 session.post(hostname="api.bsky.app",  endpoint="xrpc/app.bsky.notification.updateSeen", params={"seenAt": "2025-01-26T00:00:00Z"})
 """
@@ -99,7 +98,6 @@ class Session(object):
         bs.save()
 
     def load_serialized_session(self):
-        log.info(f"Bluesky client session instantiated from database cache")
         db_session = BskySession.select().order_by(BskySession.created_at.desc())[0]
         self.__dict__ = db_session.__dict__["__data__"]
         self.set_auth_header()

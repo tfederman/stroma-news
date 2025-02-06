@@ -8,7 +8,7 @@ from rq import Queue, get_current_job
 import feedparser
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
-from settings import log
+from settings import log, QUEUE_NAME_FETCH
 from database.models import FeedFetch, Article
 from media.meta import get_article_meta
 
@@ -17,7 +17,7 @@ LATEST_DATE   = datetime.today() + timedelta(days=2)
 EARLIEST_DATE = datetime.today() - timedelta(days=30)
 ABSOLUTE_EARLIEST_DATE = datetime(2024, 1, 1)
 
-q = Queue(connection=Redis())
+q = Queue(QUEUE_NAME_FETCH, connection=Redis())
 
 
 # to do - check last [n] fetches here, if all are errors, set feed inactive

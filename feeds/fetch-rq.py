@@ -3,12 +3,12 @@ from datetime import datetime, timedelta, UTC
 from redis import Redis
 from rq import Queue
 
-from settings import log
+from settings import log, QUEUE_NAME_FETCH
 from database.models import Feed, FeedFetch, Article
 from feeds.tasks import *
 
 
-def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=14):
+def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=7):
 
     now = datetime.now(UTC)
 
@@ -28,7 +28,7 @@ def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=14):
 
 if __name__=='__main__':
 
-    q = Queue(connection=Redis())
+    q = Queue(QUEUE_NAME_FETCH, connection=Redis())
 
     feeds_to_fetch = get_feeds_to_fetch()
     #print(len(feeds_to_fetch))
