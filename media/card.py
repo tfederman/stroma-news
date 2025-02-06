@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import requests
 
 from settings import log
-from utils.string import html_to_text
+from utils.strutil import html_to_text
 from database.models import ArticleMetaCardy
 
 
