@@ -7,10 +7,10 @@ from database.models import Feed, Article, FeedFetch, BskyUserProfile, ArticlePo
 
 DID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
 
-
-def get_feed_json(article_posts, cursor="c"):
-    posts = [{"post": ap.uri} for ap in article_posts]
-    return json.dumps({"cursor": cursor, "feed": posts})
+def apply_filters(posts):
+    terms = ["trump","musk"]
+    posts = [p for p in posts if not any(t in f"{p.article.title or ''} {p.article.summary or ''}".lower() for t in terms)]
+    return posts
 
 
 if __name__ == "__main__":
@@ -18,29 +18,35 @@ if __name__ == "__main__":
     # save this optimization for later if needed, reduce number of files to one per letter in alphabet
     # files = {c:open(f"feed-json/users-{c}.json", "w") for c in DID_ALPHABET}
 
-    subscriptions = BskyUserProfile.select(BskyUserProfile.did, Feed.id) \
+    subscriptions = BskyUserProfile \
+                        .select(BskyUserProfile.did, BskyUserProfile.handle, Feed.id, Feed.active, Feed.title, Feed.site_href, Feed.uri) \
                         .join(UserFeedSubscription) \
                         .join(Feed) \
                         .where(UserFeedSubscription.active==True) \
-                        .where(Feed.active==True) \
                         .order_by(UserFeedSubscription.user) \
                         .namedtuples()
 
     updated_files = 0
 
     for user, feeds in groupby(subscriptions, lambda row: row.did):
-        article_posts = ArticlePost.select(ArticlePost.uri) \
+
+        feeds = list(feeds)
+        metadata = {"handle": feeds[0].handle, "subscriptions": [{"uri": f.uri, "active": f.active, "site_href": f.site_href, "title": f.title} for f in feeds]}
+
+        article_posts = ArticlePost.select(ArticlePost.id, ArticlePost.uri, Article.title, Article.summary) \
                             .join(Article) \
                             .join(FeedFetch) \
-                            .where(FeedFetch.feed_id << [f.id for f in feeds]) \
+                            .where(FeedFetch.feed_id << [f.id for f in feeds if f.active]) \
                             .where(ArticlePost.uri.is_null(False)) \
-                            .order_by(Article.published_parsed.desc()) \
-                            .limit(48)
+                            .order_by(ArticlePost.id.desc()) \
+                            .limit(512)
 
         did_minus_prefix = user.replace("did:plc:", "")
         filename = f"feed-json/{did_minus_prefix}.json"
 
-        feed_json = get_feed_json(article_posts)
+        article_posts = apply_filters(article_posts)
+        posts = [{"cursor": ap.id, "post": ap.uri} for ap in article_posts]
+        feed_json = json.dumps({"feed": posts, "metadata": metadata})
         try:
             feed_json_prior = open(filename).read()
         except FileNotFoundError:
