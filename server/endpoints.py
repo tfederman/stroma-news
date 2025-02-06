@@ -4,7 +4,7 @@ import json
 from feed import FEEDS, get_feed_items
 from auth import get_user_did
 from util import response
-from sqs import send_sqs_success
+from sqs import send_sqs
 
 CUSTOM_FEED_HOSTNAME = os.environ["CUSTOM_FEED_HOSTNAME"]
 

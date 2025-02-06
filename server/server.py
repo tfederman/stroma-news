@@ -15,6 +15,7 @@ def lambda_handler(event, context):
         path = event.get('rawPath') or '/default'
         return dispatch_map.get(path, default)(event)
     except Exception as e:
+        print(f"+++ DISPATCH EXCEPTION {e.__class__.__name__} - {e}")
         send_sqs_failure(f"{e.__class__.__name__} - {e}")
         return default(event, ".")
 

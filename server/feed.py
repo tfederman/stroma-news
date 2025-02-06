@@ -1,7 +1,10 @@
+import sys
+
 import json
 
 import boto3
 
+BOF_CURSOR = sys.maxsize
 EOF_CURSOR = "eof"
 
 FEEDS = [
@@ -9,7 +12,7 @@ FEEDS = [
     {'uri': f'at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/tmf-test'},
 ]
 
-def get_s3_object(did, limit, cursor):
+def get_s3_feed(did, limit, cursor):
 
     if cursor == EOF_CURSOR:
         return {"cursor": cursor, "feed": []}
@@ -26,26 +29,27 @@ def get_s3_object(did, limit, cursor):
     limit = limit or 24
 
     try:
-        cursor = cursor or 0
+        cursor = cursor or BOF_CURSOR
         cursor = int(cursor)
     except ValueError:
-        cursor = 0
+        cursor = BOF_CURSOR
 
     feed_items = []
     new_cursor = 0
+    items_skipped = 0
 
     for item in j["feed"]:
-        if not cursor:
+
+        if item["cursor"] < cursor:
             feed_items.append({"post": item["post"]})
             new_cursor = item["cursor"]
-        elif item["cursor"] < cursor:
-            feed_items.append({"post": item["post"]})
-            new_cursor = item["cursor"]
+        else:
+            items_skipped += 1
 
         if len(feed_items) >= limit:
             break
 
-    if not feed_items:
+    if items_skipped + len(feed_items) == len(j["feed"]):
         new_cursor = EOF_CURSOR
 
     feed = {"cursor": str(new_cursor), "feed": feed_items}
@@ -54,7 +58,7 @@ def get_s3_object(did, limit, cursor):
 
 def get_feed_items(feed, did, limit, cursor):
     try:
-        return get_s3_object(did)[:limit]
+        return get_s3_feed(did, limit, cursor)
     except Exception as e:
         print(f"+++ s3_test_feed_items exception: {e}")
         return placeholder_feed_items()[:limit]

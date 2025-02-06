@@ -23,7 +23,7 @@ def send_sqs(body, feed, limit, cursor, did, items_sent):
             'did': {'DataType': 'String', 'StringValue': did},
             'feed': {'DataType': 'String', 'StringValue': feed},
             'limit': {'DataType': 'Number', 'StringValue': str(limit)},
-            'cursor': {'DataType': 'String', 'StringValue': cursor},
+            'cursor': {'DataType': 'String', 'StringValue': cursor or "none"},
             'items_sent': {'DataType': 'Number', 'StringValue': str(items_sent)}
         },
         MessageBody=body,
