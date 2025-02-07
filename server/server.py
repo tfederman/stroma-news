@@ -4,7 +4,6 @@ from sqs import send_sqs_failure
 dispatch_map = {
     '/xrpc/app.bsky.feed.describeFeedGenerator': describe_feed_generator,
     '/.well-known/did.json': did_json,
-    '/event': event_json,
     '/xrpc/app.bsky.feed.getFeedSkeleton': get_feed_skeleton,
     '/failure': failure,
     '/default': default,

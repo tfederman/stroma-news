@@ -61,8 +61,5 @@ def did_json(event):
         }
     return response(r)
 
-def event_json(event):
-    return response(event)
-
 def default(event, suffix=""):
     return response({'statusCode': 200, 'body': f'Stroma feed generator{suffix}'})
