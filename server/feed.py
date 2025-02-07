@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 
@@ -18,8 +19,9 @@ def get_s3_feed(did, limit, cursor):
 
     short_did = did.replace("did:plc:", "")
 
-    bucket = "stroma-news"
-    key = f"feed-json/{short_did}.json"
+    bucket = os.environ["S3_BUCKET"]
+    prefix = os.environ["BSKY_AUTH_PASSWORD"]
+    key = f"{prefix}/{short_did}.json"
 
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=bucket, Key=key)
