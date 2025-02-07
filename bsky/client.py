@@ -80,10 +80,8 @@ class Session(object):
         self.created_at = datetime.now().isoformat()
 
         self.serialize()
-        log.info(json.dumps(self.__dict__, indent=4))
+        log.info(json.dumps(self.__dict__))
 
-        bs = BskySession(**self.__dict__)
-        bs.save()
         self.set_auth_header()
 
 
@@ -95,6 +93,8 @@ class Session(object):
 
     def serialize(self):
         bs = BskySession(**self.__dict__)
+        # cause a new record to be saved rather than updating the previous one
+        bs.id = None
         bs.save()
 
     def load_serialized_session(self):
@@ -136,6 +136,10 @@ class Session(object):
 
         if Session.is_expired_token_response(r):
             self.refresh_session()
+
+            # need to update auth header in args with new access token
+            args["headers"].update(self.auth_header)
+
             try:
                 r = method(uri, **args)
                 call_exception = None
