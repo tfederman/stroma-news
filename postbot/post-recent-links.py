@@ -25,7 +25,7 @@ def post_article(session, article):
         post_id = None
         remote_metadata_lookup = False
 
-    article_post = ArticlePost(uri=uri, post_id=post_id, article=article, exception=exception)
+    article_post = ArticlePost(uri=uri, post_id=post_id, article=article, exception=exception, remote_metadata_lookup=remote_metadata_lookup)
     article_post.save()
     return article_post, remote_metadata_lookup
 

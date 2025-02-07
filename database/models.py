@@ -32,7 +32,6 @@ class Feed(BaseModel):
     subtitle = CharField(null=True)
     site_href = CharField(null=True)
     image_url = CharField(null=True)
-    next_fetch_at = DateTimeField(null=True)
     active = BooleanField(default=True)
 
     def reschedule_feed(self):
