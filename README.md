@@ -6,7 +6,7 @@ An RSS reader implemented through Bluesky custom feeds. Choose your favorite RSS
 
 1. Follow the "Stroma News" Bluesky custom feed. (add link here) This feed will be empty for you at first.
 
-2. Send a DM to the Stroma News account ([@stroma-news](https://bsky.app/profile/stroma.news)) with instructions to manage your subscriptions.
+2. Send a DM to the Stroma News account ([@stroma.news](https://bsky.app/profile/stroma.news)) with instructions to manage your subscriptions.
 
    To subscribe to a feed, send a message with the body:
 
