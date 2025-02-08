@@ -27,7 +27,7 @@ if __name__ == "__main__":
     #exit(0)
 
     # keep within hourly rate limit (5000 points/hour @ 3 points/create)
-    articles = articles[:400]
+    articles = articles[:800]
 
     for n,article in enumerate(articles):
         log.info(f"{n+1}/{len(articles)} - {article.id} - {article.title}")
