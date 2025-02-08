@@ -9,7 +9,7 @@ import feedparser
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
 from settings import log, QUEUE_NAME_FETCH
-from database.models import FeedFetch, Article
+from database.models import Feed, FeedFetch, Article
 from media.meta import get_article_meta
 
 
@@ -21,8 +21,9 @@ q = Queue(QUEUE_NAME_FETCH, connection=Redis())
 
 
 # to do - check last [n] fetches here, if all are errors, set feed inactive
-def fetch_feed_task(feed):
+def fetch_feed_task(feed_id):
 
+    feed = Feed.get(feed_id)
     last_fetch = get_last_fetch(feed)
 
     fetch = FeedFetch(feed=feed)
@@ -149,7 +150,7 @@ def save_articles(fetch, fp, last_fetch):
                 or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
                 or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
                 or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
-                # to do - log somewhere?
+                log.warning(f"skipping article: {entry.updated_parsed}, {entry.published_parsed} ({EARLIEST_DATE}, {LATEST_DATE})")
                 continue
 
 
@@ -158,7 +159,7 @@ def save_articles(fetch, fp, last_fetch):
             continue
 
         # limit feeds with very long history
-        if n >= 60:
+        if n >= 100:
             continue
 
         if not hasattr(entry, "id"):
