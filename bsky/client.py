@@ -23,6 +23,12 @@ session.get(hostname="api.bsky.app",  endpoint="xrpc/app.bsky.notification.listN
 session.post(hostname="api.bsky.app",  endpoint="xrpc/app.bsky.notification.updateSeen", params={"seenAt": "2025-01-26T00:00:00Z"})
 """
 
+class NoCursorException(Exception):
+    pass
+
+class ExcessiveIteration(Exception):
+    pass
+
 class Session(object):
 
     def __init__(self):
@@ -32,33 +38,95 @@ class Session(object):
             self.create_session()
 
 
-    def process_cursor(func):
+    def process_cursor(func, **kwargs):
         """Decorator for any api call that returns a cursor, this looks up the previous
         cursor from the database, applies it to the call, and saves the newly returned
         cursor to the database."""
 
-        ins = inspect.signature(func)
-        _endpoint = ins.parameters["endpoint"].default
+        inspection = inspect.signature(func)
+        _endpoint = inspection.parameters["endpoint"].default
+        _collection_attr = inspection.parameters["collection_attr"].default
+        _paginate = inspection.parameters["paginate"].default
 
         def cursor_mgmt(self, **kwargs):
             endpoint = kwargs.get("endpoint", _endpoint)
-            previous_cursor = BskyAPICursor.select().where(endpoint==endpoint).order_by(BskyAPICursor.timestamp.desc()).first()
-            kwargs["cursor"] = previous_cursor.cursor if previous_cursor else ZERO_CURSOR
-            response = func(self, **kwargs)
-            try:
-                save_cursor = response.cursor
-                if previous_cursor and previous_cursor.cursor == save_cursor:
-                    # don't save a new cursor record if it hasn't changed
-                    pass
+            collection_attr = kwargs.get("collection_attr", _collection_attr)
+            paginate = kwargs.get("paginate", _paginate)
+
+            # only provide the database-backed cursor if one was not passed manually
+            if not "cursor" in kwargs:
+                previous_db_cursor = BskyAPICursor.select().where(BskyAPICursor.endpoint==endpoint).order_by(BskyAPICursor.timestamp.desc()).first()
+                kwargs["cursor"] = previous_db_cursor.cursor if previous_db_cursor else ZERO_CURSOR
+                if kwargs["cursor"] == ZERO_CURSOR:
+                    log.info(f"use cursor {kwargs['cursor']} (default)")
+                    previous_db_cursor = BskyAPICursor(cursor=ZERO_CURSOR)
                 else:
-                    BskyAPICursor.create(endpoint=endpoint, cursor=save_cursor)
-            except AttributeError:
-                log.info(f"No cursor in response for {endpoint}")
+                    log.info(f"use cursor {kwargs['cursor']} (db)")
+            else:
+                log.info(f"use cursor {kwargs['cursor']} (arg)")
+                previous_db_cursor = None
+
+            if paginate:
+                responses, final_cursor = self.call_with_pagination(func, **kwargs)
+                response = self.combine_paginated_responses(responses, collection_attr)
+            else:
+                response = func(self, **kwargs)
+                final_cursor = response.cursor
+
+            if previous_db_cursor and previous_db_cursor.cursor != final_cursor:
+                # only save a new cursor record if it's changed and originally came from the database (or inherited the default value)
+                log.info(f"save cursor {final_cursor} to database for endpoint {endpoint}")
+                BskyAPICursor.create(endpoint=endpoint, cursor=final_cursor)
 
             return response
 
         return cursor_mgmt
 
+
+    def combine_paginated_responses(self, responses, collection_attr="logs"):
+
+        for page_response in responses[1:]:
+            log.info(f"collection length: {len(getattr(responses[0], collection_attr))}")
+            combined_collection = getattr(responses[0], collection_attr) + getattr(page_response, collection_attr)
+            setattr(responses[0], collection_attr, combined_collection)
+
+        log.info(f"new collection length: {len(getattr(responses[0], collection_attr))}")
+
+        return responses
+
+
+    def call_with_pagination(self, func, **kwargs):
+
+        assert "cursor" in kwargs, "called call_with_pagination without a cursor argument"
+        responses = []
+        iteration_count = 0
+        ITERATION_MAX = 100
+
+        while True:
+
+            iteration_count += 1
+            log.info(f"iteration_count {iteration_count}")
+            if iteration_count > ITERATION_MAX:
+                raise ExcessiveIteration(f"tried to paginate through too many pages ({ITERATION_MAX})")
+
+            response = func(self, **kwargs)
+            responses.append(response)
+
+            try:
+                new_cursor = response.cursor
+                if new_cursor == kwargs["cursor"]:
+                    log.info(f"iteration {iteration_count} resulted in same cursor, break ({new_cursor})")
+                    break
+                else:
+                    log.info(f"iteration {iteration_count} produced new cursor ({kwargs['cursor']} -> {new_cursor})")
+
+                kwargs["cursor"] = new_cursor
+
+            except AttributeError:
+                log.error(f"no cursor found in api call that was expected to have one: {kwargs['endpoint']} ({iteration_count})")
+                raise
+
+        return responses, kwargs["cursor"]
 
     def create_session(self, method=SESSION_METHOD_CREATE):
 
@@ -212,7 +280,7 @@ class Session(object):
 
 
     @process_cursor
-    def get_convo_logs(self, endpoint="xrpc/chat.bsky.convo.getLog", cursor=ZERO_CURSOR):
+    def get_convo_logs(self, endpoint="xrpc/chat.bsky.convo.getLog", cursor=ZERO_CURSOR, collection_attr="logs", paginate=True):
         # usage notes: https://github.com/bluesky-social/atproto/issues/2760
         return self.get(hostname="api.bsky.chat", endpoint=endpoint, params={"cursor": cursor})
 
