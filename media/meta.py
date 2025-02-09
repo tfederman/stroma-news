@@ -61,7 +61,6 @@ def get_article_meta(article_id):
             pass
 
     article_meta.save()
-    return article_meta.id
 
 
 if __name__=="__main__":
