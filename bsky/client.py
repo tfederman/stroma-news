@@ -92,7 +92,7 @@ class Session(object):
 
         log.info(f"new collection length: {len(getattr(responses[0], collection_attr))}")
 
-        return responses
+        return responses[0]
 
 
     def call_with_pagination(self, func, **kwargs):
