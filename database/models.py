@@ -188,9 +188,22 @@ class ConvoMessage(BaseModel):
     received_at = DateTimeField(default=datetime.now)
     processed_at = DateTimeField(null=True)
     process_error = CharField(null=True)
+    facet_link = CharField()
 
     class Meta:
         table_name = "convo_message"
+
+    @staticmethod
+    def get_facet_link(message):
+        facets = getattr(message, "facets", [])
+        try:
+            facet = facets[0]
+        except IndexError:
+            return
+
+        for feature in facet.features:
+            if getattr(feature, "$type") == "app.bsky.richtext.facet#link":
+                return feature.uri
 
 
 class UserFeedSubscription(BaseModel):
