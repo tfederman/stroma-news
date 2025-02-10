@@ -13,8 +13,8 @@ def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=4):
 
     now = datetime.now(TIMEZONE)
 
-    # get all feeds annotated with last fetch time and most recent article time
-    feeds = Feed.select(Feed.id, Feed.uri, fn.max(FeedFetch.timestamp).alias("max_ts"), fn.max(Article.published_parsed).alias("max_pp")).join(FeedFetch).join(Article, JOIN.LEFT_OUTER).group_by(Feed).namedtuples()
+    # get all active feeds annotated with last fetch time and most recent article time
+    feeds = Feed.select(Feed.id, Feed.uri, fn.max(FeedFetch.timestamp).alias("max_ts"), fn.max(Article.published_parsed).alias("max_pp")).join(FeedFetch).join(Article, JOIN.LEFT_OUTER).where(Feed.active==True).group_by(Feed).namedtuples()
 
     # subtract feeds that were fetched recently
     feeds = [f for f in feeds if now-f.max_ts > timedelta(hours=recent_fetch_hours)]
