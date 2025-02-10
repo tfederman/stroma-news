@@ -21,6 +21,13 @@ except KeyError:
     log.critical("bsky credentials must be set in BSKY_AUTH_USERNAME and BSKY_AUTH_PASSWORD environment variables")
     raise
 
+try:
+    S3_BUCKET = os.environ["S3_BUCKET"]
+    S3_PREFIX = os.environ["S3_PREFIX"]
+    LOCAL_FEED_PATH = os.environ["LOCAL_FEED_PATH"]
+except KeyError:
+    log.critical("filesystem environment variables not set")
+    raise
 
 QUEUE_NAME_FETCH = "fetch"
 QUEUE_NAME_POST  = "post"
