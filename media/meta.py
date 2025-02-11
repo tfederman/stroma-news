@@ -5,7 +5,6 @@ import peewee
 import requests
 from bs4 import BeautifulSoup
 
-from database import db
 from database.models import *
 from utils.strutil import html_to_text
 
