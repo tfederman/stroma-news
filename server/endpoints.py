@@ -20,18 +20,19 @@ def failure(event):
 def get_feed_skeleton(event):
 
     params = event.get("queryStringParameters", {})
-    if FORCE_DEFAULT_DID:
-        feed_id = DEFAULT_DID
-    else:
-        feed_id = params.get("feed", DEFAULT_FEED)
+    feed_id = params.get("feed", DEFAULT_FEED)
     cursor = params.get("cursor")
     limit = int(params.get("limit") or 24)
 
     short_feed_id = feed_id.split("/")[-1]
 
     try:
-        did = get_user_did(event["headers"]["authorization"])
-        default_did = False
+        if FORCE_DEFAULT_DID:
+            did = DEFAULT_DID
+            default_did = True
+        else:
+            did = get_user_did(event["headers"]["authorization"])
+            default_did = False
     except Exception as e:
         print(f"+++ get_user_did exception: {e.__class__.__name__} - {e}")
         did = DEFAULT_DID
