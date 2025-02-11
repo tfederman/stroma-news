@@ -7,7 +7,7 @@ from settings import log, QUEUE_NAME_FETCH
 from feeds.user import build_user_feed
 from feeds.tasks import fetch_feed_task, save_articles_task
 from utils.filesystem import upload_user_feed_to_s3
-from database.models import ConvoMessage, UserFeedSubscription, Feed
+from database.models import ConvoMessage, UserFeedSubscription, Feed, UserTextFilter
 
 
 class ActionFailed(Exception):
@@ -74,11 +74,33 @@ def unsubscribe(uri, cm):
         raise ActionFailed(f"Feed to remove not found for user {sender.id}, uri {uri}")
 
 
+def remove_quotes(text):
+    if text[0] in ["'",'"']:
+        text = text[1:]
+    if text[-1] in ["'",'"']:
+        text = text[:-1]
+    return text
+
+def add_filter(text, cm):
+    text = remove_quotes(text)
+    UserTextFilter.create(user=cm.sender, text=text)
+    log.info(f"filter added for user {cm.sender.handle} ({text})")
+
+def remove_filter(text, cm):
+    text = remove_quotes(text)
+    rows_deleted = UserTextFilter.delete().where(UserTextFilter.user==cm.sender, UserTextFilter.text==text).execute()
+    logfunc = log.info if rows_deleted == 1 else log.warning
+    logfunc(f"{rows_deleted} filter rows deleted for user {cm.sender.handle} ({text})")
+
+
 if __name__=="__main__":
 
     ACTIONS = {
         "subscribe": subscribe,
         "unsubscribe": unsubscribe,
+        "filter": add_filter,
+        "unfilter": remove_filter,
+        #"list": list_subscriptions,
     }
 
     for cm in ConvoMessage.select().where(ConvoMessage.processed_at.is_null()):
