@@ -8,7 +8,8 @@ from sqs import send_sqs
 
 CUSTOM_FEED_HOSTNAME = os.environ["CUSTOM_FEED_HOSTNAME"]
 
-DEFAULT_DID = "did:plc:5euo5vsiaqnxplnyug3k3art"
+DEFAULT_DID = os.environ["DEFAULT_DID"]
+FORCE_DEFAULT_DID = os.environ["FORCE_DEFAULT_DID"].lower() == "true"
 DEFAULT_FEED = FEEDS[0]["uri"]
 
 
@@ -19,7 +20,10 @@ def failure(event):
 def get_feed_skeleton(event):
 
     params = event.get("queryStringParameters", {})
-    feed_id = params.get("feed", DEFAULT_FEED)
+    if FORCE_DEFAULT_DID:
+        feed_id = DEFAULT_DID
+    else:
+        feed_id = params.get("feed", DEFAULT_FEED)
     cursor = params.get("cursor")
     limit = int(params.get("limit") or 24)
 
