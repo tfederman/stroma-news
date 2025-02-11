@@ -5,11 +5,11 @@ from atproto import Client, models
 HANDLE = os.environ["BSKY_AUTH_USERNAME"]
 PASSWORD = os.environ["BSKY_AUTH_PASSWORD"]
 HOSTNAME = os.environ["CUSTOM_FEED_HOSTNAME"]
-FEED_URI = 'at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-test'
-RECORD_NAME = 'stroma-test'
-DISPLAY_NAME = 'Stroma Test'
-DESCRIPTION = 'Test of Stroma code'
-AVATAR_PATH = "../assets/atom.png"
+FEED_URI = 'at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-news'
+RECORD_NAME = 'stroma-news'
+DISPLAY_NAME = 'RSS Feeds from Stroma'
+DESCRIPTION = 'Links from RSS feeds that you subscribe to'
+AVATAR_PATH = "./assets/atom.png"
 SERVICE_DID = f"did:web:{HOSTNAME}"
 
 def main():
