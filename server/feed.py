@@ -20,7 +20,7 @@ def get_s3_feed(did, limit, cursor):
     short_did = did.replace("did:plc:", "")
 
     bucket = os.environ["S3_BUCKET"]
-    prefix = os.environ["BSKY_AUTH_PASSWORD"]
+    prefix = os.environ["S3_PREFIX"]
     key = f"{prefix}/{short_did}.json"
 
     s3 = boto3.client('s3')
