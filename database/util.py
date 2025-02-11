@@ -1,8 +1,6 @@
 import sys
 import inspect
 
-import psycopg2
-
 from database import db
 import database.models
 
@@ -42,6 +40,7 @@ if __name__=="__main__":
     create_non_existing_tables(db)
 
     # migrating sqlite data to postgres:
+    # import psycopg2
     # con = psycopg2.connect("dbname=stroma ...")
     # for _,cls in get_model_classes():
     #     print(f"migrating {cls._meta.table_name}...")
