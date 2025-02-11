@@ -8,6 +8,7 @@ BOF_CURSOR = sys.maxsize
 EOF_CURSOR = "eof"
 
 FEEDS = [
+    {'uri': f'at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-news'},
     {'uri': f'at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-test'},
     {'uri': f'at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/tmf-test'},
 ]
