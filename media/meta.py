@@ -5,7 +5,7 @@ import peewee
 import requests
 from bs4 import BeautifulSoup
 
-from database.models import *
+from database.models import Article, ArticleMeta
 from utils.strutil import html_to_text
 
 headers = {
