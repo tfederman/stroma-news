@@ -5,20 +5,20 @@ from datetime import datetime, timedelta
 
 from redis import Redis
 from rq import Queue, get_current_job
+from rq.group import Group
 import feedparser
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
 from settings import log, QUEUE_NAME_FETCH
 from database.models import Feed, FeedFetch, Article
 from media.meta import get_article_meta
+from feeds.user import build_user_feed
+from utils.filesystem import upload_user_feed_to_s3
 
 
 LATEST_DATE   = datetime.today() + timedelta(days=2)
 EARLIEST_DATE = datetime.today() - timedelta(days=30)
 ABSOLUTE_EARLIEST_DATE = datetime(2024, 1, 1)
-
-q = Queue(QUEUE_NAME_FETCH, connection=Redis())
-
 
 # to do - check last [n] fetches here, if all are errors, set feed inactive
 def fetch_feed_task(feed_id):
@@ -108,7 +108,11 @@ def fetch_feed_task(feed_id):
     return fetch, fp, last_fetch
 
 
-def save_articles_task():
+def save_articles_task(rebuild_for_user=None):
+
+    r = Redis()
+    q = Queue(QUEUE_NAME_FETCH, connection=r)
+
     current_job = get_current_job()
     job = q.fetch_job(current_job.dependency.id)
     
@@ -118,16 +122,24 @@ def save_articles_task():
     try:
         fetch, fp, last_fetch = job.result
     except:
-        print(type(job.result))
-        print(job.result)
-        print(job.id)
-        print(job.args)
+        log.error(f"error fetching result for job {job.id} in save_articles_task")
         raise
 
     articles = save_articles(fetch, fp, last_fetch)
 
-    for article in articles:
-        q.enqueue(get_article_meta, article.id, result_ttl=86400)
+    if not articles:
+        return 0
+
+    group = Group.create(connection=r)
+
+    article_meta_jobs = group.enqueue_many(
+        queue=q,
+        job_datas=[Queue.prepare_data(get_article_meta, (a.id,), result_ttl=86400) for a in articles],
+    )
+
+    if rebuild_for_user:
+        build_user_feed_job = q.enqueue(build_user_feed, rebuild_for_user, depends_on=article_meta_jobs)
+        upload_job = q.enqueue(upload_user_feed_to_s3, rebuild_for_user, depends_on=build_user_feed_job)
 
     return len(articles)
     

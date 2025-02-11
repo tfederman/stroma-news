@@ -1,6 +1,12 @@
 from datetime import datetime
 
-from settings import log
+from redis import Redis
+from rq import Queue
+
+from settings import log, QUEUE_NAME_FETCH
+from feeds.user import build_user_feed
+from feeds.tasks import fetch_feed_task, save_articles_task
+from utils.filesystem import upload_user_feed_to_s3
 from database.models import ConvoMessage, UserFeedSubscription, Feed
 
 
@@ -8,8 +14,6 @@ class ActionFailed(Exception):
     pass
 
 def get_feed_by_uri(uri, create=True):
-
-    uri = uri.replace("?m=1", "")
 
     feeds = Feed.select().where(
         (Feed.uri==f"{uri}") | (Feed.uri==f"{uri}/") |
@@ -21,29 +25,43 @@ def get_feed_by_uri(uri, create=True):
     )
 
     try:
-        feed = feeds[0]
+        return feeds[0], False
     except IndexError:
         if create:
-            feed = Feed.create(uri=uri)
+            return Feed.create(uri=uri), True
         else:
-            feed = None
-
-    return feed
+            return None, False
 
 
 def subscribe(uri, cm):
 
-    feed = get_feed_by_uri(uri)
+    log.info(f"subscribe {cm.sender.handle} to {uri}")
+    uri = cm.facet_link or uri
+    feed, feed_created = get_feed_by_uri(uri)
+    log.info(f"feed: {feed.id} (created: {feed_created})")
 
-    if feed:
-        sub = UserFeedSubscription.create(user=cm.sender, feed=feed)
-    else:
+    if not feed:
         raise ActionFailed(f"Feed to subscribe to not found for {uri}")
+
+    q = Queue(QUEUE_NAME_FETCH, connection=Redis())
+    sub = UserFeedSubscription.create(user=cm.sender, feed=feed)
+    log.info(f"subscription id {sub.id}")
+
+    # if rss feed is new, then first fetch it and next rebuild/upload requesting user's feed.
+    # if rss feed is existing, only rebuild user's feed.
+    if feed_created:
+        log.info(f"queue fetch and save tasks (for {cm.sender.handle})")
+        job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=86400)
+        job_save  = q.enqueue(save_articles_task, cm.sender, depends_on=job_fetch, result_ttl=86400)
+    else:
+        log.info(f"queue build and upload feed jobs (for {cm.sender.handle})")
+        build_user_feed_job = q.enqueue(build_user_feed, cm.sender)
+        upload_job = q.enqueue(upload_user_feed_to_s3, cm.sender, depends_on=build_user_feed_job)
 
 
 def unsubscribe(uri, cm):
 
-    feed = get_feed_by_uri(uri, create=False)
+    feed, created = get_feed_by_uri(uri, create=False)
 
     if feed:
         sub = UserFeedSubscription.get_or_none(user=cm.sender, feed=feed)
@@ -68,7 +86,7 @@ if __name__=="__main__":
             action, obj = cm.text.strip().split(" ", 1)
         except Exception as e:
             cm.process_error = f"{e.__class__.__name__}: {e}"
-            log.error(f"error processing message {cm.id}: {cm.process_error}")
+            log.error(f"error parsing message {cm.id}: {cm.process_error}")
             action = None
 
         if action:
