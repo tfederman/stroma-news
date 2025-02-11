@@ -67,7 +67,7 @@ def fetch_feed_task(feed_id):
             or "SAXParseException" in bozo_exception \
             or "URLError" in bozo_exception:
         job = get_current_job()
-        job.meta['skip'] = True
+        job.meta["skip"] = True
         job.save_meta()
 
 
@@ -117,7 +117,7 @@ def save_articles_task(rebuild_for_user=None):
     job = q.fetch_job(current_job.dependency.id)
     
     if job.meta.get("skip"):
-        return -1
+        return
 
     try:
         fetch, fp, last_fetch = job.result
