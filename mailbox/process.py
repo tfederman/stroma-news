@@ -51,8 +51,8 @@ def subscribe(uri, cm):
     # if rss feed is existing, only rebuild user's feed.
     if feed_created:
         log.info(f"queue fetch and save tasks (for {cm.sender.handle})")
-        job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=86400)
-        job_save  = q.enqueue(save_articles_task, cm.sender, depends_on=job_fetch, result_ttl=86400)
+        job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=28800)
+        job_save  = q.enqueue(save_articles_task, cm.sender, depends_on=job_fetch, result_ttl=28800)
     else:
         log.info(f"queue build and upload feed jobs (for {cm.sender.handle})")
         build_user_feed_job = q.enqueue(build_user_feed, cm.sender)

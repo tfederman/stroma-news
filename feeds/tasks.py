@@ -129,13 +129,13 @@ def save_articles_task(rebuild_for_user=None):
     articles = save_articles(fetch, fp, last_fetch)
 
     if not articles:
-        return 0
+        return
 
     post_article_jobs = []
 
     for article in articles:
-        get_article_meta_job = queue_fetch.enqueue(get_article_meta, (article.id,), result_ttl=86400)
-        post_article_job = queue_post.enqueue(post_article, (article.id,), depends_on=get_article_meta_job, result_ttl=86400)
+        get_article_meta_job = queue_fetch.enqueue(get_article_meta, (article.id,), result_ttl=28800)
+        post_article_job = queue_post.enqueue(post_article, (article.id,), depends_on=get_article_meta_job, result_ttl=28800)
         post_article_jobs.append(post_article_job)
 
     if rebuild_for_user:

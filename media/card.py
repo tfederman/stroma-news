@@ -23,6 +23,10 @@ def get_post(session, article):
             article.author = ""
         article.author = html_to_text(article.author)
 
+    # redundant to include author name when it's the same as the feed name
+    if article.author == article.feed_fetch.feed.title:
+        article.author = None
+
     timestamp_format = "%A, %B %-d, %Y"
 
     if article.author and article.published_parsed:

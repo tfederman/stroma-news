@@ -36,5 +36,5 @@ if __name__=='__main__':
 
     for n,feed in enumerate(feeds_to_fetch):
         log.info(f"{n+1:04}/{len(feeds_to_fetch):04} {feed.uri}")
-        job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=86400)
-        job_save  = q.enqueue(save_articles_task, depends_on=job_fetch, result_ttl=86400)
+        job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=28800)
+        job_save  = q.enqueue(save_articles_task, depends_on=job_fetch, result_ttl=28800)
