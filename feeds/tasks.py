@@ -127,6 +127,7 @@ def save_articles_task(rebuild_for_user=None):
         raise
 
     articles = save_articles(fetch, fp, last_fetch)
+    articles = [a for a in articles if a.link != "(none)"]
 
     if not articles:
         return
