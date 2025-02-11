@@ -5,15 +5,15 @@ from datetime import datetime, timedelta
 
 from redis import Redis
 from rq import Queue, get_current_job
-from rq.group import Group
 import feedparser
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
-from settings import log, QUEUE_NAME_FETCH
+from settings import log, QUEUE_NAME_FETCH, QUEUE_NAME_POST
 from database.models import Feed, FeedFetch, Article
 from media.meta import get_article_meta
 from feeds.user import build_user_feed
 from utils.filesystem import upload_user_feed_to_s3
+from postbot.post import post_article
 
 
 LATEST_DATE   = datetime.today() + timedelta(days=2)
@@ -111,10 +111,11 @@ def fetch_feed_task(feed_id):
 def save_articles_task(rebuild_for_user=None):
 
     r = Redis()
-    q = Queue(QUEUE_NAME_FETCH, connection=r)
+    queue_fetch = Queue(QUEUE_NAME_FETCH, connection=r)
+    queue_post = Queue(QUEUE_NAME_POST, connection=r)
 
     current_job = get_current_job()
-    job = q.fetch_job(current_job.dependency.id)
+    job = queue_fetch.fetch_job(current_job.dependency.id)
     
     if job.meta.get("skip"):
         return
@@ -130,16 +131,16 @@ def save_articles_task(rebuild_for_user=None):
     if not articles:
         return 0
 
-    group = Group.create(connection=r)
+    post_article_jobs = []
 
-    article_meta_jobs = group.enqueue_many(
-        queue=q,
-        job_datas=[Queue.prepare_data(get_article_meta, (a.id,), result_ttl=86400) for a in articles],
-    )
+    for article in articles:
+        get_article_meta_job = queue_fetch.enqueue(get_article_meta, (article.id,), result_ttl=86400)
+        post_article_job = queue_post.enqueue(post_article, (article.id,), depends_on=get_article_meta_job, result_ttl=86400)
+        post_article_jobs.append(post_article_job)
 
     if rebuild_for_user:
-        build_user_feed_job = q.enqueue(build_user_feed, rebuild_for_user, depends_on=article_meta_jobs)
-        upload_job = q.enqueue(upload_user_feed_to_s3, rebuild_for_user, depends_on=build_user_feed_job)
+        build_user_feed_job = queue_fetch.enqueue(build_user_feed, rebuild_for_user, depends_on=post_article_jobs)
+        upload_job = queue_fetch.enqueue(upload_user_feed_to_s3, rebuild_for_user, depends_on=build_user_feed_job)
 
     return len(articles)
     
