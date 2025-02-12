@@ -287,8 +287,8 @@ class Session(object):
 
 if __name__=="__main__":
     from bsky import session
-    # s.get_convo_logs()
+    # session.get_convo_logs()
     # actor = "did:plc:5euo5vsiaqnxplnyug3k3art"
     actor = "stroma-news.bsky.social"
-    user = BskyUserProfile.get_or_create_from_api(actor, s)
+    user = BskyUserProfile.get_or_create_from_api(actor, session)
     print(user.id)

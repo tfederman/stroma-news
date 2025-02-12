@@ -34,9 +34,6 @@ class Feed(BaseModel):
     image_url = CharField(null=True)
     active = BooleanField(default=True)
 
-    def reschedule_feed(self):
-        latest_article = Article.select().order_by(published_parsed).limit(1).first()
-
 
 class FeedFetch(BaseModel):
     feed = ForeignKeyField(Feed)
