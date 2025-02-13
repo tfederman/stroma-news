@@ -18,7 +18,7 @@ from postbot.post import post_article
 
 LATEST_DATE   = datetime.today() + timedelta(days=2)
 EARLIEST_DATE = datetime.today() - timedelta(days=30)
-ABSOLUTE_EARLIEST_DATE = datetime(2024, 1, 1)
+ABSOLUTE_EARLIEST_DATE = datetime(2024, 7, 1)
 
 # to do - check last [n] fetches here, if all are errors, set feed inactive
 def fetch_feed_task(feed_id):
@@ -176,7 +176,7 @@ def save_articles(fetch, fp, last_fetch):
             continue
 
         # limit feeds with very long history
-        if n >= 100:
+        if n >= 80:
             continue
 
         if not hasattr(entry, "id"):
