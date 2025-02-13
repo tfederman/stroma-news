@@ -22,6 +22,11 @@ def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=4):
     # subtract feeds that have not had an article published recently
     feeds = [f for f in feeds if (f.max_pp is not None) and (now-f.max_pp > timedelta(days=recent_fetch_content_days))]
 
+    # add feeds that have never been fetched
+    feeds += list(Feed.select().join(FeedFetch, JOIN.LEFT_OUTER).where(FeedFetch.id==None, Feed.active==True))
+
+    # to do - subtract feeds that have consistently errored?
+
     return feeds
 
 
