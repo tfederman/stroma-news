@@ -8,7 +8,7 @@ HOSTNAME = os.environ["CUSTOM_FEED_HOSTNAME"]
 FEED_URI = 'at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-news'
 RECORD_NAME = 'stroma-news'
 DISPLAY_NAME = 'RSS Feeds from Stroma'
-DESCRIPTION = 'Links from RSS feeds that you subscribe to'
+DESCRIPTION = 'Links from RSS feeds that you subscribe to. (still in development)'
 AVATAR_PATH = "./assets/atom.png"
 SERVICE_DID = f"did:web:{HOSTNAME}"
 
