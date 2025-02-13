@@ -4,7 +4,9 @@ import requests
 
 from settings import log
 from utils.strutil import html_to_text
+from media.meta import REQUESTS_HEADERS
 from database.models import ArticleMetaCardy
+from utils.image import MAX_ALLOWED_IMAGE_SIZE, resize_image
 
 
 def get_post(session, article):
@@ -94,10 +96,22 @@ def get_link_card_embed(session, article):
     if img_url:
         try:
             mimetype = get_mimetype(img_url)
-            r = requests.get(img_url)
+            r = requests.get(img_url, headers=REQUESTS_HEADERS)
             r.raise_for_status()
-            assert len(r.content) <= 999424, f"thumbnail image too big: ({len(r.content)}) {img_url} - {article.link}"
-            upload_response = session.upload_file(r.content, mimetype)
+
+            image_bytes = r.content
+            if len(image_bytes) > MAX_ALLOWED_IMAGE_SIZE:
+                try:
+                    image_bytes = resize_image(image_bytes)
+                except:
+                    image_bytes = r.content
+
+            if len(image_bytes) < len(r.content):
+                log.info(f"resized image from {len(r.content)} bytes to {len(image_bytes)} bytes for article {article.id} - {img_url}")
+
+            assert len(image_bytes) <= MAX_ALLOWED_IMAGE_SIZE, f"thumbnail image too big: ({len(image_bytes)}) {img_url} - {article.link} (cardy_lookup: {cardy_lookup})"
+
+            upload_response = session.upload_file(image_bytes, mimetype)
             card["thumb"] = {
                 '$type': 'blob', 
                 'ref': {'$link': getattr(upload_response.blob.ref, '$link')}, 
@@ -106,6 +120,7 @@ def get_link_card_embed(session, article):
             }
         except Exception as e:
             log.warning(f"can't fetch image: {e.__class__.__name__} - {e}")
+            raise
 
     return {
         "$type": "app.bsky.embed.external",
