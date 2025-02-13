@@ -16,7 +16,7 @@ def post_article(article_id):
         article = Article.get(Article.id==article_id)
 
         if len(article.articlepost_set) > 0:
-            log.warning(f"tried to post article ({article_id}) that arleady has an article_post")
+            log.warning(f"tried to post article ({article_id}) that already has an article_post")
             return article.articlepost_set[0].id
 
         TEMPORARY_EARLIEST_DATE = datetime.now(TIMEZONE) - timedelta(days=10)
