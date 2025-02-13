@@ -268,13 +268,29 @@ class Session(object):
     def upload_file(self, image_data, mimetype):
         return self.post(data=image_data, endpoint="xrpc/com.atproto.repo.uploadBlob", headers={"Content-Type": mimetype})
 
-    def create_record(self, post):
+
+    def create_record(self, collection, post):
         params = {
             "repo": self.did,
-            "collection": "app.bsky.feed.post",
+            "collection": collection,
             "record": post,
         }
         return self.post(endpoint="xrpc/com.atproto.repo.createRecord", params=params)
+
+    def create_post(self, post):
+        return self.create_record("app.bsky.feed.post", post)
+
+
+    def delete_record(self, collection, rkey):
+        params = {
+            "repo": self.did,
+            "collection": collection,
+            "rkey": rkey,
+        }
+        return self.post(endpoint="xrpc/com.atproto.repo.deleteRecord", params=params)
+
+    def delete_post(self, post_id):
+        return self.delete_record("app.bsky.feed.post", post_id)
 
 
     def get_profile(self, actor):
