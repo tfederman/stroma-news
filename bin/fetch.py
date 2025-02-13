@@ -16,11 +16,11 @@ def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=4):
     # get all active feeds annotated with last fetch time and most recent article time
     feeds = Feed.select(Feed.id, Feed.uri, fn.max(FeedFetch.timestamp).alias("max_ts"), fn.max(Article.published_parsed).alias("max_pp")).join(FeedFetch).join(Article, JOIN.LEFT_OUTER).where(Feed.active==True).group_by(Feed).namedtuples()
 
-    # subtract feeds that were fetched recently
+    # only include feeds that were not fetched too recently
     feeds = [f for f in feeds if now-f.max_ts > timedelta(hours=recent_fetch_hours)]
 
-    # subtract feeds that have not had an article published recently
-    feeds = [f for f in feeds if (f.max_pp is not None) and (now-f.max_pp > timedelta(days=recent_fetch_content_days))]
+    # only include feeds that have had an article published recently
+    feeds = [f for f in feeds if (f.max_pp is not None) and (now-f.max_pp < timedelta(days=recent_fetch_content_days))]
 
     # add feeds that have never been fetched
     feeds += list(Feed.select().join(FeedFetch, JOIN.LEFT_OUTER).where(FeedFetch.id==None, Feed.active==True))
