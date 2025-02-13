@@ -122,24 +122,6 @@ class BskyAPICursor(BaseModel):
         table_name = "bsky_api_cursor"
 
 
-class BskyAPIResponseError(BaseModel):
-
-    timestamp = DateTimeField(default=datetime.now)
-    api_host = CharField()
-    endpoint = CharField()
-    params = CharField(null=True)
-    method = CharField()
-    headers = CharField(null=True)
-    auth_method = CharField()
-    http_status_code = IntegerField(null=True)
-    exception_class = CharField(null=True)
-    exception_text = CharField(null=True)
-    response_text = CharField(null=True)
-
-    class Meta:
-        table_name = "bsky_api_response_error"
-
-
 class BskyUserProfile(BaseModel):
     did = CharField(unique=True)
     handle = CharField(unique=True)
@@ -219,27 +201,20 @@ class UserTextFilter(BaseModel):
     class Meta:
         table_name = "user_text_filter"
 
-"""
-users = list(BskyUserProfile.select())
-feeds = list(Feed.select().where(Feed.active==True))
 
-import random
+class APICallLog(BaseModel):
+    timestamp = DateTimeField(default=datetime.now)
+    hostname = CharField()
+    endpoint = CharField()
+    cursor_passed = CharField(null=True)
+    cursor_received = CharField(null=True)
+    method = CharField(null=True)
+    http_status_code = IntegerField(null=True)
+    params = CharField(null=True)
+    exception_class = CharField(null=True)
+    exception_text = CharField(null=True)
+    exception_response = CharField(null=True)
+    response_keys = CharField(null=True)
 
-for user in users:
-    for n in range(random.randint(1,20)):
-        UserFeedSubscription.create(user=user, feed=random.choice(feeds))
-
-c = Counter()
-for user in users:
-    articles = Article.select() \
-                .join(FeedFetch) \
-                .join(Feed) \
-                .join(UserFeedSubscription) \
-                .join(ArticlePost, on=(Article.id==ArticlePost.article_id)) \
-                .where(UserFeedSubscription.user==user) \
-                .where(Feed.active==True) \
-                .where(UserFeedSubscription.active==True) \
-                .order_by(Article.published_parsed.desc())
-    c.update([len(articles)])
-
-"""
+    class Meta:
+        table_name = "api_call_log"
