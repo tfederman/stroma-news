@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from datetime import datetime
 import requests
 
-from database.models import BskySession, BskyAPICursor, BskyUserProfile, BskyAPIResponseError
+from database.models import BskySession, BskyAPICursor, BskyUserProfile, APICallLog
 from settings import log, AUTH_USERNAME, AUTH_PASSWORD
 
 HOSTNAME_ENTRYWAY = "bsky.social"
@@ -170,10 +170,22 @@ class Session(object):
         self.__dict__ = db_session.__dict__["__data__"]
         self.set_auth_header()
 
+    def call_with_session_refresh(self, method, uri, args):
+        r = method(uri, **args)
 
-    def call(self, method=requests.get, hostname=HOSTNAME_ENTRYWAY, endpoint=None, auth_method=AUTH_METHOD_TOKEN, params=None, use_refresh_token=False, data=None, headers=None):
+        if Session.is_expired_token_response(r):
+            self.refresh_session()
+            args["headers"].update(self.auth_header)
+            r = method(uri, **args)
+
+        return r
+
+
+    def call(self, method=requests.get, hostname=HOSTNAME_ENTRYWAY, endpoint=None, auth_method=AUTH_METHOD_TOKEN, params=None, use_refresh_token=False, data=None, headers=None, skip_log=False):
 
         uri = f"https://{hostname}/{endpoint}"
+
+        apilog = APICallLog(endpoint=endpoint, method=method.__name__, hostname=hostname, cursor_passed=params.get("cursor") if params else None)
 
         args = {}
         args["headers"] = headers or {}
@@ -195,57 +207,48 @@ class Session(object):
             else:
                 args["json"] = params
 
+        params_text = json.dumps(params)
+        apilog.params = params_text[:2048]
+
         try:
-            r = method(uri, **args)
+            r = self.call_with_session_refresh(method, uri, args)
+            response_object = json.loads(r.text, object_hook=lambda d: SimpleNamespace(**d))
+
+            apilog.http_status_code = r.status_code
+            if r.status_code != 200:
+                apilog.exception_response = r.text
+                apilog.exception_class = getattr(response_object, "error", None)
+                apilog.exception_text = getattr(response_object, "message", None)
+
+            apilog.response_keys = ",".join(sorted(response_object.__dict__.keys()))
+            apilog.cursor_received = getattr(response_object, "cursor", None)
             call_exception = None
         except Exception as e:
             r = None
+            apilog.exception_class = __class__.__name__
+            apilog.exception_text = str(e)
+            response_object = None
             call_exception = e
 
-        if Session.is_expired_token_response(r):
-            self.refresh_session()
+        if not skip_log:
+            apilog.save()
 
-            # need to update auth header in args with new access token
-            args["headers"].update(self.auth_header)
+        if apilog.exception_class:
+            log.error(f"{apilog.exception_class} - more details at:")
+            log.error(f"SELECT * FROM api_call_log WHERE id={apilog.id};")
+        if apilog.http_status_code and apilog.http_status_code >= 400:
+            log.error(f"Status code: {apilog.http_status_code}")
 
-            try:
-                r = method(uri, **args)
-                call_exception = None
-            except Exception as e:
-                call_exception = e
+        # after logging to the database, exceptions should be raised to the calling code
+        if isinstance(call_exception, Exception):
+            raise call_exception
+        elif not r:
+            raise Exception(f"Failed request, no request object")
+        elif r.status_code != 200:
+            raise Exception(f"Failed request, status code {r.status_code}")
 
-        if not r or getattr(r, "status_code", 0) != 200 or call_exception:
-            response_error = BskyAPIResponseError.create(
-                api_host = hostname,
-                endpoint = endpoint,
-                params = json.dumps(params),
-                method = method.__name__,
-                headers = json.dumps(args["headers"]),
-                auth_method = auth_method,
-                exception_class = call_exception.__class__.__name__ if call_exception else None,
-                exception_text = str(call_exception) if call_exception else None,
-                http_status_code = getattr(r, "status_code", None),
-                response_text = getattr(r, "text", None),
-            )
-            log.error(f"SELECT * FROM bsky_api_response_error WHERE id={response_error.id};")
+        return response_object
 
-            if isinstance(call_exception, Exception):
-                raise call_exception
-            elif not r:
-                raise Exception(f"Failed request, no request object")
-            elif r.status_code != 200:
-                raise Exception(f"Failed request, status code {r.status_code}")
-
-        try:
-            if r.text:
-                return json.loads(r.text, object_hook=lambda d: SimpleNamespace(**d))
-            else:
-                return None
-        except json.JSONDecodeError as e:
-            log.error(f"{r.status_code}")
-            log.error(f"{r.text}")
-            log.error(f"{e}")
-            raise
 
     def post(self, **kwargs):
         kwargs["method"] = requests.post
