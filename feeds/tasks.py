@@ -70,6 +70,10 @@ def fetch_feed_task(feed_id):
         job.meta["skip"] = True
         job.save_meta()
 
+    if not fp:
+        fetch.http_duration = http_duration
+        fetch.save()
+        return fetch, fp, last_fetch
 
     # update feed database record if there are new values of certain fields
     for f in ["title","subtitle","image_url"]:
@@ -88,8 +92,7 @@ def fetch_feed_task(feed_id):
         if link_href and link_href != feed.site_href:
             feed.site_href = link_href
     except Exception as e:
-        fetch.exception = f"{e.__class__.__name__} - {e}"
-        log.error(fetch.exception)
+        log.warning(f"Couldn't update site_href: {e.__class__.__name__} - {e}")
 
     if feed.is_dirty():
         feed.save()
