@@ -1,15 +1,17 @@
 import time
 import json
+from datetime import datetime, timedelta
 
 import peewee
 import requests
 from bs4 import BeautifulSoup
 
+from settings import log, TIMEZONE
 from database.models import Article, ArticleMeta
 from utils.strutil import html_to_text
 
-headers = {
-     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.3",
+REQUESTS_HEADERS = {
+     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
      "Accept-Language": "en-US,en;q=0.5",
      "Accept-Encoding": "gzip, deflate, br",
@@ -26,10 +28,16 @@ headers = {
 def get_article_meta(article_id):
 
     article = Article.get(Article.id==article_id)
+
+    TEMPORARY_EARLIEST_DATE = datetime.now(TIMEZONE) - timedelta(days=10)
+    if article.published_parsed and article.published_parsed <= TEMPORARY_EARLIEST_DATE:
+        log.warning(f"article {article.id} skipped in get_article_meta because it's too old: {article.published_parsed}")
+        return
+
     article_meta, _ = ArticleMeta.get_or_create(article=article)
 
     try:
-        r = requests.get(article.link, headers=headers, timeout=8)
+        r = requests.get(article.link, headers=REQUESTS_HEADERS, timeout=8)
         article_meta.status = r.status_code
         assert r.status_code == 200, f"r.status_code in get_article_meta: {r.status_code}"
         bs = BeautifulSoup(r.text, 'html.parser')

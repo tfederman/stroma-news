@@ -91,7 +91,7 @@ def get_link_card_embed(session, article):
     if not description:
         description = html_to_text(article.summary)
 
-    card = {"uri": article.link, "title": article.title, "description": description}
+    card = {"uri": article.link, "title": article.title or "", "description": description or ""}
 
     if img_url:
         try:
