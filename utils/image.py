@@ -1,9 +1,17 @@
 import io
+import math
 
+import requests
 from PIL import Image
 
-THUMB_SIZES = ((768, 768),(576, 576),(384, 384))
-MAX_ALLOWED_IMAGE_SIZE = int((1024**2) * 0.96)
+from utils.strutil import is_likely_binary
+from utils.http import get_http_headers, ACCEPT_TYPE_DEFAULT, ACCEPT_TYPE_IMAGES
+
+THUMB_SIZES = ((768, 768),(576, 576),(384, 384),(256, 256))
+
+
+# "This file is too large. It is 980.06KB but the maximum size is 976.56KB"
+MAX_ALLOWED_IMAGE_SIZE = math.floor(976.56 * 1024)
 
 def resize_image(image_bytes):
 
@@ -17,7 +25,45 @@ def resize_image(image_bytes):
         image.save(image_bytes_out, format=image.format)
         image_bytes_out = image_bytes_out.getvalue()
         final_length = len(image_bytes_out)
-        if len(image_bytes_out) <= MAX_ALLOWED_IMAGE_SIZE:
+        if len(image_bytes_out) < MAX_ALLOWED_IMAGE_SIZE:
             return image_bytes_out
 
     raise Exception(f"failed to resize image to an appropriate size ({original_length} -> {final_length})")
+
+
+def ensure_resized_image(image_bytes):
+    if len(image_bytes) > MAX_ALLOWED_IMAGE_SIZE:
+        return resize_image(image_bytes)
+
+    return image_bytes
+
+
+def get_http_image(url, accept_type=ACCEPT_TYPE_DEFAULT):
+
+    mimetype = get_mimetype(url)
+    r = requests.get(url, headers=get_http_headers(accept_type))
+    r.raise_for_status()
+
+    if accept_type == ACCEPT_TYPE_DEFAULT and not is_likely_binary(r.content):
+        return get_http_image(url, accept_type=ACCEPT_TYPE_IMAGES)
+    elif accept_type == ACCEPT_TYPE_IMAGES and not is_likely_binary(r.content):
+        raise Exception(f"image for article {article.id} does not seem to be binary data (after retry) - {img_url}")
+
+    return r.content, mimetype
+
+
+def get_mimetype(url):
+
+    suffix = url.split(".")[-1].lower().split("?")[0]
+    mimetype = "application/octet-stream"
+
+    if suffix in ["png"]:
+        mimetype = "image/png"
+    elif suffix in ["jpeg", "jpg"]:
+        mimetype = "image/jpeg"
+    elif suffix in ["webp"]:
+        mimetype = "image/webp"
+    elif suffix in ["gif"]:
+        mimetype = "image/gif"
+
+    return mimetype
