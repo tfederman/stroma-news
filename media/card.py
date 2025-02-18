@@ -59,7 +59,7 @@ def get_cardy_data(url):
         assert r.status_code == 200, f"HTTP error getting cardy data: {r.status_code} - {r.text}"
         return r.json()
     except Exception as e:
-        log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {e} - {url}")
+        log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {str(e).strip()} - {url}")
         return {}
 
 
@@ -81,7 +81,6 @@ def get_link_card_embed(session, article):
         if not created:
             img_url = article_meta_cardy.image
             description = article_meta_cardy.description
-            log.info(f"using article metadata from cached cardy info ({article.id}, {article_meta_cardy.id})")
         else:
             cardy_data = get_cardy_data(article.link)
             cardy_lookup = True
@@ -93,7 +92,6 @@ def get_link_card_embed(session, article):
                 article_meta_cardy.description = description
                 article_meta_cardy.image = img_url
                 article_meta_cardy.save()
-                log.info(f"using article metadata from retrieved cardy info ({article.id}, {article_meta_cardy.id})")
 
     if not description:
         description = html_to_text(article.summary)

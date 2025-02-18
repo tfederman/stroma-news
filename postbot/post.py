@@ -69,12 +69,23 @@ def post_article(article_id):
             log.warning(f"tried to post article ({article.id}) that already has an article_post")
             return article.articlepost_set[0].id
 
+        terms = [line.strip() for line in open("ignore-terms.txt")]
+        filter_check_str = (article.title or "").lower() + (article.summary or "")
+        if any(t.lower() in filter_check_str.lower() for t in terms):
+            log.info(f"article filtered before remote metadata lookup: {article.id}")
+            return
+
         TEMPORARY_EARLIEST_DATE = datetime.now(TIMEZONE) - timedelta(days=10)
         if article.published_parsed and article.published_parsed <= TEMPORARY_EARLIEST_DATE:
             log.info(f"article {article.id} skipped in post_article because it's too old: {article.published_parsed}")
             return
 
         post, remote_metadata_lookup = get_post(session, article)
+        external = post["embed"]["external"]
+        filter_check_str = (external.get("title") or "") + (external.get("description") or "")
+        if any(t.lower() in filter_check_str.lower() for t in terms):
+            log.info(f"article filtered after remote metadata lookup: {article.id}")
+            return
 
         response = session.create_post(post)
         uri = response.uri

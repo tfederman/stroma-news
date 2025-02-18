@@ -149,6 +149,10 @@ def save_articles_task(rebuild_for_user=None):
 
     for article in articles:
 
+        terms = [line.strip() for line in open("ignore-terms.txt")]
+        if any(t in (article.title or "").lower()+(article.summary or "").lower() for t in terms):
+            continue
+
         get_article_meta_job = queue_fetch.enqueue(get_article_meta, article.id, result_ttl=14400)
         post_article_job = queue_post.enqueue(post_article, article.id, depends_on=get_article_meta_job, result_ttl=14400)
         post_article_jobs.append(post_article_job)
@@ -179,10 +183,6 @@ def save_articles(fetch, fp, last_fetch):
             or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
             continue
 
-        # limit feeds with long history
-        if n >= 40:
-            continue
-
         if not hasattr(entry, "id"):
             try:
                 entry.id = hashlib.sha1(entry.link.encode('utf-8')).hexdigest()
@@ -207,7 +207,9 @@ def save_articles(fetch, fp, last_fetch):
             article.link = "(none)"
 
         # note - race condition possible if articles were inserted after the
-        # Article.select().where(Article.entry_id==entry.id) check above
+        # Article.select().where(Article.entry_id==entry.id) check above,
+        # if the same feed under 2 different uris are being fetched at once
+        # from two different workers.
         article.save()
         saved_articles.append(article)
 
