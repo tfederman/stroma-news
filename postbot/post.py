@@ -23,7 +23,7 @@ def server_is_struggling():
     r = redis.Redis()
     struggle_begin_timestamp = r.get(SERVER_STRUGGLE_BEGIN_KEY)
     if struggle_begin_timestamp and time.time() - int(struggle_begin_timestamp) < SERVER_STRUGGLE_BACKOFF_DURATION:
-        return True
+        return True, 0, float(struggle_begin_timestamp)
 
     error_timestamps = r.lrange(SERVER_ERROR_TIMESTAMPS_KEY, 0, SERVER_ERROR_TIMESTAMPS_MAX_LENGTH+1)
 
@@ -36,9 +36,9 @@ def server_is_struggling():
     recent_errors = sum(1 for t in error_timestamps if time.time() - float(t) < SERVER_ERROR_RECENCY_SECONDS)
     if recent_errors >= MAX_SERVER_ERROR_COUNT:
         r.set(SERVER_STRUGGLE_BEGIN_KEY, time.time())
-        return True
+        return True, recent_errors, time.time()
 
-    return False
+    return False, recent_errors, None
 
 
 def create_retry(article, article_post=None, td=None):
@@ -51,8 +51,10 @@ def post_article(article_id):
 
     article = Article.get(Article.id==article_id)
 
-    if server_is_struggling():
-        log.warning(f"not posting article {article.id} because of recent 500 errors ({server_error_count})")
+    struggling, recent_error_count, struggle_begin_timestamp = server_is_struggling()
+    if struggling:
+        started_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(struggle_begin_timestamp))
+        log.warning(f"not posting article {article.id} because of recent 500 errors (flagged at: {started_at})")
         create_retry(article)
         return
 
@@ -90,8 +92,9 @@ def post_article(article_id):
 
     if exception and ("status code 500" in exception or "status code 502" in exception):
         r = redis.Redis()
-        recent_error_count = r.lpush(SERVER_ERROR_TIMESTAMPS_KEY, time.time())
-        log.warning(f"logging new 500 range server error (and creating retry for article {article.id})")
+        r.lpush(SERVER_ERROR_TIMESTAMPS_KEY, time.time())
+        recent_error_count += 1
+        log.warning(f"logging new 500 range server error (recent count: {recent_error_count}) (and creating retry for article {article.id})")
         create_retry(article, article_post)
 
     # sleep longer if a call was made to an external service (avoids http 429s)
