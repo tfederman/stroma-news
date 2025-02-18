@@ -4,12 +4,13 @@ import requests
 
 from settings import log
 from utils.strutil import html_to_text
-from media.meta import REQUESTS_HEADERS
 from database.models import ArticleMetaCardy
-from utils.image import MAX_ALLOWED_IMAGE_SIZE, resize_image
+from utils.image import get_http_image, ensure_resized_image
 
 
 def get_post(session, article):
+
+    # to do - should html_to_text happen earlier, before article is saved to db?
 
     article.title = html_to_text(article.title)
     embed, cardy_lookup = get_link_card_embed(session, article)
@@ -38,6 +39,10 @@ def get_post(session, article):
     elif article.published_parsed and not article.author:
         text.append(f'Published on {article.published_parsed.strftime(timestamp_format)}')
 
+    # "Invalid app.bsky.feed.post record: Record/text must not be longer than 300 graphemes"
+    while len("\n".join(text)) > 300:
+        text.pop()
+
     post = {
         "$type": "app.bsky.feed.post",
         "text": "\n".join(text),
@@ -54,7 +59,7 @@ def get_cardy_data(url):
         assert r.status_code == 200, f"HTTP error getting cardy data: {r.status_code} - {r.text}"
         return r.json()
     except Exception as e:
-        log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {e}")
+        log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {e} - {url}")
         return {}
 
 
@@ -76,6 +81,7 @@ def get_link_card_embed(session, article):
         if not created:
             img_url = article_meta_cardy.image
             description = article_meta_cardy.description
+            log.info(f"using article metadata from cached cardy info ({article.id}, {article_meta_cardy.id})")
         else:
             cardy_data = get_cardy_data(article.link)
             cardy_lookup = True
@@ -87,30 +93,23 @@ def get_link_card_embed(session, article):
                 article_meta_cardy.description = description
                 article_meta_cardy.image = img_url
                 article_meta_cardy.save()
+                log.info(f"using article metadata from retrieved cardy info ({article.id}, {article_meta_cardy.id})")
 
     if not description:
         description = html_to_text(article.summary)
 
     card = {"uri": article.link, "title": article.title or "", "description": description or ""}
 
+    image_bytes = None
     if img_url:
         try:
-            mimetype = get_mimetype(img_url)
-            r = requests.get(img_url, headers=REQUESTS_HEADERS)
-            r.raise_for_status()
+            image_bytes, mimetype = get_http_image(img_url)
+            image_bytes = ensure_resized_image(image_bytes)
+        except Exception as e:
+            log.warning(f"can't fetch image, posting anyway ({article.id}): {e.__class__.__name__} - {e}")
 
-            image_bytes = r.content
-            if len(image_bytes) > MAX_ALLOWED_IMAGE_SIZE:
-                try:
-                    image_bytes = resize_image(image_bytes)
-                except:
-                    image_bytes = r.content
-
-            if len(image_bytes) < len(r.content):
-                log.info(f"resized image from {len(r.content)} bytes to {len(image_bytes)} bytes for article {article.id} - {img_url}")
-
-            assert len(image_bytes) <= MAX_ALLOWED_IMAGE_SIZE, f"thumbnail image too big: ({len(image_bytes)}) {img_url} - {article.link} (cardy_lookup: {cardy_lookup})"
-
+    if image_bytes:
+        try:
             upload_response = session.upload_file(image_bytes, mimetype)
             card["thumb"] = {
                 '$type': 'blob', 
@@ -119,24 +118,9 @@ def get_link_card_embed(session, article):
                 'size': upload_response.blob.size,
             }
         except Exception as e:
-            log.warning(f"can't fetch image: {e.__class__.__name__} - {e}")
-            raise
+            log.warning(f"exception while uploadung image, posting anyway ({article.id}) ({img_url}): {e.__class__.__name__} - {e}")
 
     return {
         "$type": "app.bsky.embed.external",
         "external": card,
     }, cardy_lookup
-
-def get_mimetype(url):
-
-    suffix = url.split(".")[-1].lower()
-    mimetype = "application/octet-stream"
-
-    if suffix in ["png"]:
-        mimetype = "image/png"
-    elif suffix in ["jpeg", "jpg"]:
-        mimetype = "image/jpeg"
-    elif suffix in ["webp"]:
-        mimetype = "image/webp"
-
-    return mimetype
