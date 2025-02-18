@@ -10,7 +10,7 @@ if __name__=="__main__":
     moved_feeds = Feed.select(Feed, FeedFetch.href, most_recent_fetch.c.max_ts) \
                 .join(most_recent_fetch, on=(Feed.id==most_recent_fetch.c.feed_id)) \
                 .join(FeedFetch, on=FeedFetch.timestamp==most_recent_fetch.c.max_ts) \
-                .where(FeedFetch.status==301) \
+                .where(FeedFetch.status==301, Feed.active==True, Feed.uri!=FeedFetch.href) \
                 .namedtuples()
 
     for feed in moved_feeds:
@@ -31,7 +31,7 @@ if __name__=="__main__":
             feed_to_update.save()
 
         else:
-            print(f"Updating feed #{feed.id} ({feed.title}) from: {feed.uri} to: {feed.href}")
+            print(f"Updating feed #{feed.id} ({feed.title})\n{feed.uri}\n{feed.href}\n")
             assert feed_to_update.uri == feed.uri and feed_to_update.uri != feed.href
             feed_to_update.uri = feed.href
             feed_to_update.save()
