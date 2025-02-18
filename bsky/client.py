@@ -234,10 +234,12 @@ class Session(object):
             apilog.save()
 
         if apilog.exception_class:
-            log.error(f"{apilog.exception_class} - more details at:")
+            log.error(f"{apilog.exception_class} - for more details run the query:")
             log.error(f"SELECT * FROM api_call_log WHERE id={apilog.id};")
+
         if apilog.http_status_code and apilog.http_status_code >= 400:
             log.error(f"Status code: {apilog.http_status_code}")
+            raise Exception(f"Failed request, status code {apilog.http_status_code}")
 
         # after logging to the database, exceptions should be raised to the calling code
         if isinstance(call_exception, Exception):
