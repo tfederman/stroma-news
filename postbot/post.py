@@ -9,8 +9,37 @@ from settings import log, TIMEZONE
 from media.card import get_post
 from database.models import Article, ArticlePost, ArticlePostRetry
 
-MAX_SERVER_ERROR_COUNT = 5
-SERVER_ERROR_COUNT_KEY = "server_error_count"
+MAX_SERVER_ERROR_COUNT = 10
+SERVER_ERROR_RECENCY_SECONDS = 120
+SERVER_ERROR_TIMESTAMPS_KEY = "server_error_timestamps"
+SERVER_ERROR_TIMESTAMPS_MAX_LENGTH  = MAX_SERVER_ERROR_COUNT * 4
+SERVER_ERROR_TIMESTAMPS_TRIM_LENGTH = MAX_SERVER_ERROR_COUNT * 2
+SERVER_STRUGGLE_BEGIN_KEY = "struggle_begin_timestamp"
+SERVER_STRUGGLE_BACKOFF_DURATION = 900
+
+
+def server_is_struggling():
+
+    r = redis.Redis()
+    struggle_begin_timestamp = r.get(SERVER_STRUGGLE_BEGIN_KEY)
+    if struggle_begin_timestamp and time.time() - int(struggle_begin_timestamp) < SERVER_STRUGGLE_BACKOFF_DURATION:
+        return True
+
+    error_timestamps = r.lrange(SERVER_ERROR_TIMESTAMPS_KEY, 0, SERVER_ERROR_TIMESTAMPS_MAX_LENGTH+1)
+
+    # reduce number of trims by trimming from [100] down to [50]
+    # and then allow the list to get back up to [100] elements
+    # rather than constantly trim from [100] down to [99]
+    if len(error_timestamps) > SERVER_ERROR_TIMESTAMPS_MAX_LENGTH:
+        r.ltrim(SERVER_ERROR_TIMESTAMPS_KEY, 0, SERVER_ERROR_TIMESTAMPS_TRIM_LENGTH)
+
+    recent_errors = sum(1 for t in error_timestamps if time.time() - float(t) < SERVER_ERROR_RECENCY_SECONDS)
+    if recent_errors >= MAX_SERVER_ERROR_COUNT:
+        r.set(SERVER_STRUGGLE_BEGIN_KEY, time.time())
+        return True
+
+    return False
+
 
 def create_retry(article, article_post=None, td=None):
     td = td or timedelta(minutes=10)
@@ -22,9 +51,7 @@ def post_article(article_id):
 
     article = Article.get(Article.id==article_id)
 
-    r = redis.Redis()
-    server_error_count = int(r.get(SERVER_ERROR_COUNT_KEY) or 0)
-    if server_error_count >= MAX_SERVER_ERROR_COUNT:
+    if server_is_struggling():
         log.warning(f"not posting article {article.id} because of recent 500 errors ({server_error_count})")
         create_retry(article)
         return
@@ -62,13 +89,10 @@ def post_article(article_id):
     article_post.save()
 
     if exception and ("status code 500" in exception or "status code 502" in exception):
-        server_error_count = r.incr(SERVER_ERROR_COUNT_KEY)
-        log.warning(f"incrementing server_error_count ({server_error_count})")
-
-        # to do - actually - create retry regardless?
-        if server_error_count >= MAX_SERVER_ERROR_COUNT:
-            log.warning(f"not posting article {article.id} because of recent 500 errors ({server_error_count})")
-            create_retry(article, article_post)
+        r = redis.Redis()
+        recent_error_count = r.lpush(SERVER_ERROR_TIMESTAMPS_KEY, time.time())
+        log.warning(f"logging new 500 range server error (and creating retry for article {article.id})")
+        create_retry(article, article_post)
 
     # sleep longer if a call was made to an external service (avoids http 429s)
     if remote_metadata_lookup:
