@@ -1,0 +1,18 @@
+[Unit]
+Description=RQ Dashboard
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/todd/stroma-news
+Environment=LANG=en_US.UTF-8
+Environment=LC_ALL=en_US.UTF-8
+Environment=LC_LANG=en_US.UTF-8
+ExecStart=/opt/py/bin/rq-dashboard
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+PrivateTmp=true
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
