@@ -17,8 +17,8 @@ from postbot.post import post_article
 
 
 LATEST_DATE   = datetime.today() + timedelta(days=2)
-EARLIEST_DATE = datetime.today() - timedelta(days=30)
-ABSOLUTE_EARLIEST_DATE = datetime(2024, 7, 1)
+EARLIEST_DATE = datetime.today() - timedelta(days=3)
+ABSOLUTE_EARLIEST_DATE = EARLIEST_DATE
 
 # to do - check last [n] fetches here, if all are errors, set feed inactive
 def fetch_feed_task(feed_id):
@@ -58,7 +58,7 @@ def fetch_feed_task(feed_id):
     bozo_exception = getattr(fp, "bozo_exception", None)
     if isinstance(bozo_exception, Exception):
         fetch.bozo_exception = f"{bozo_exception.__class__.__name__} - {bozo_exception}"
-        log.error(f"bozo exception for {feed.uri}: {fetch.bozo_exception}")
+        log.warning(f"bozo exception for {feed.uri}: {fetch.bozo_exception}")
 
 
     # signal the following async job to skip itself. it's already been queued at this point.
@@ -95,6 +95,13 @@ def fetch_feed_task(feed_id):
         log.warning(f"Couldn't update site_href: {e.__class__.__name__} - {e}")
 
     if feed.is_dirty():
+        if feed.title and feed.title.startswith("Comments on:"):
+            log.info(f"setting feed {feed.id} inactive because it's a comments feed")
+            feed.active = False
+            job = get_current_job()
+            job.meta["skip"] = True
+            job.save_meta()
+
         feed.save()
 
     for field in ["etag","modified","modified_parsed","href","updated","updated_parsed","version","status"]:
@@ -129,6 +136,9 @@ def save_articles_task(rebuild_for_user=None):
         log.error(f"error fetching result for job {job.id} in save_articles_task")
         raise
 
+    if not fetch.feed.active:
+        log.warning(f"exiting save_articles_task because feed {fetch.feed.id} is marked inactive")
+
     articles = save_articles(fetch, fp, last_fetch)
     articles = [a for a in articles if a.link != "(none)"]
 
@@ -138,8 +148,9 @@ def save_articles_task(rebuild_for_user=None):
     post_article_jobs = []
 
     for article in articles:
-        get_article_meta_job = queue_fetch.enqueue(get_article_meta, (article.id,), result_ttl=28800)
-        post_article_job = queue_post.enqueue(post_article, (article.id,), depends_on=get_article_meta_job, result_ttl=28800)
+
+        get_article_meta_job = queue_fetch.enqueue(get_article_meta, article.id, result_ttl=14400)
+        post_article_job = queue_post.enqueue(post_article, article.id, depends_on=get_article_meta_job, result_ttl=14400)
         post_article_jobs.append(post_article_job)
 
     if rebuild_for_user:
@@ -162,21 +173,14 @@ def save_articles(fetch, fp, last_fetch):
                 setattr(entry, field, None)
 
         # save article if this feed has never been fetched before, or if it falls in the date window
-        if last_fetch:
-            if (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
-                or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
-                or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
-                or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
-                log.warning(f"skipping article: {entry.updated_parsed}, {entry.published_parsed} ({EARLIEST_DATE}, {LATEST_DATE})")
-                continue
-
-
-        # limit feeds with very long history
-        if entry.published_parsed and entry.published_parsed < ABSOLUTE_EARLIEST_DATE:
+        if (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
+            or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
+            or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
+            or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
             continue
 
-        # limit feeds with very long history
-        if n >= 80:
+        # limit feeds with long history
+        if n >= 40:
             continue
 
         if not hasattr(entry, "id"):
@@ -202,6 +206,8 @@ def save_articles(fetch, fp, last_fetch):
         if not article.link:
             article.link = "(none)"
 
+        # note - race condition possible if articles were inserted after the
+        # Article.select().where(Article.entry_id==entry.id) check above
         article.save()
         saved_articles.append(article)
 
