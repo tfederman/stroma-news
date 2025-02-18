@@ -4,14 +4,14 @@ from redis import Redis
 from rq import Queue
 import peewee
 
-from bsky import session
 from settings import log, QUEUE_NAME_POST
 from database.models import Article, ArticlePost, FeedFetch, ArticleMeta
 from postbot.post import post_article
 
 
-if __name__ == "__main__":
-
+def post_recent_links():
+    """This is probably obsolete now that post_article is queued as part of the fetch
+    task pipeline. At a minimum, this query may no longer be up to date."""
     q = Queue(QUEUE_NAME_POST, connection=Redis())
 
     articles = Article.select() \
@@ -22,9 +22,6 @@ if __name__ == "__main__":
         .where(Article.published_parsed >= datetime.now(UTC) - timedelta(hours=72)) \
         .where(FeedFetch.timestamp >= datetime.now(UTC) - timedelta(hours=24)) \
         .order_by(peewee.fn.random())
-
-    #print(len(articles))
-    #exit(0)
 
     # keep within hourly rate limit (5000 points/hour @ 3 points/create)
     articles = articles[:800]
