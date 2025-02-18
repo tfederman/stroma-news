@@ -31,4 +31,4 @@ if __name__ == "__main__":
 
     for n,article in enumerate(articles):
         log.info(f"{n+1}/{len(articles)} - {article.id} - {article.title}")
-        job = q.enqueue(post_article, article.id, result_ttl=28800)
+        job = q.enqueue(post_article, article.id, result_ttl=14400)
