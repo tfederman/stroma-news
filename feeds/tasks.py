@@ -189,9 +189,15 @@ def save_articles(fetch, fp, last_fetch):
             except AttributeError:
                 entry.id = hashlib.sha1(str(entry).encode('utf-8')).hexdigest()
         
-        articles = Article.select().where(Article.entry_id==entry.id)
-        if len(articles) > 0:
+        existing_articles = Article.select().where(Article.entry_id==entry.id).count()
+        if existing_articles > 0:
             continue
+
+        if entry.link:
+            existing_articles = Article.select().where(Article.link==entry.link).count()
+            if existing_articles > 0:
+                log.info(f"skipping link {entry.link} which exists with a different entry id")
+                continue
 
         article = Article(feed_fetch=fetch, entry_id=entry.id)
 
