@@ -89,58 +89,6 @@ def fix_image_links(article, article_meta):
             article_meta.twitter_image = f"{prefix}/{article_meta.twitter_image}"
 
 
-def get_article_meta_alt(url):
-
-    article_meta, created = ArticleMetaAlt.get_or_create(url=url)
-    if not created:
-        return
-
-    try:
-        r = requests.get(url, headers=get_http_headers(), timeout=8)
-        article_meta.status = r.status_code
-        assert r.status_code == 200, f"r.status_code in get_article_meta: {r.status_code}"
-        bs = BeautifulSoup(r.text, 'html.parser')
-
-        tags = {
-            "og_title": lambda bs: bs.find("meta", property="og:title").attrs["content"],
-            "og_url":   lambda bs: bs.find("meta", property="og:url").attrs["content"],
-            "og_image": lambda bs: bs.find("meta", property="og:image").attrs["content"],
-            "og_description":      lambda bs: bs.find("meta", property="og:description").attrs["content"],
-            "twitter_image":       lambda bs: bs.find_all("meta", attrs={"name":"twitter:image"})[0].attrs["content"],
-            "twitter_description": lambda bs: bs.find_all("meta", attrs={"name":"twitter:description"})[0].attrs["content"],
-        }
-
-        for k,v in tags.items():
-            try:
-                val = v(bs)
-                if "description" in k:
-                    val = html_to_text(val)
-                setattr(article_meta, k, val)
-            except Exception as e:
-                pass
-
-        for tag in bs.find_all("link"):
-            _type = tag.attrs.get("type") or ""
-            href = tag.attrs.get("href")
-            if (_type.startswith("application/rss") or _type.startswith("application/atom")) and href:
-                if not href.startswith("http"):
-                    p = urlparse(url)
-                    if not href.startswith("/"):
-                        href = "/" + href
-                    href = f"{p.scheme}://{p.netloc}{href}"
-
-                article_meta.rss_url = href
-                article_meta.save()
-                article_meta.id = None
-
-    except Exception as e:
-        article_meta.exception = str(e)
-        try:
-            article_meta.text = r.text[:1024]
-        except:
-            pass
-
-
 if __name__=="__main__":
 
     articles = Article.select().where(Article.link ** 'http%').order_by(peewee.fn.Random()).limit(20)
