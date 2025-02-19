@@ -116,7 +116,8 @@ def get_link_card_embed(session, article):
                 'size': upload_response.blob.size,
             }
         except Exception as e:
-            log.warning(f"exception while uploading image, posting anyway ({article.id}) ({img_url}): {e.__class__.__name__} - {e}")
+            log.error(f"exception while uploading image for article {article.id} ({img_url}): {e.__class__.__name__} - {e}")
+            raise
 
     return {
         "$type": "app.bsky.embed.external",
