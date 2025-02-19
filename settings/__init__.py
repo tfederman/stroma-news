@@ -31,6 +31,6 @@ except KeyError:
 
 QUEUE_NAME_FETCH = "fetch"
 QUEUE_NAME_POST  = "post"
-QUEUE_NAME_MISC  = "misc"
+QUEUE_NAME_MAIL  = "mailbox"
 
 TIMEZONE = ZoneInfo("America/New_York")

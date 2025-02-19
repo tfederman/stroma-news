@@ -239,15 +239,15 @@ class Session(object):
 
         if apilog.http_status_code and apilog.http_status_code >= 400:
             log.error(f"Status code: {apilog.http_status_code}")
-            raise Exception(f"Failed request, status code {apilog.http_status_code}")
+            raise Exception(f"Failed request, status code {apilog.http_status_code} ({getattr(apilog, 'exception_class', '')})")
 
         # after logging to the database, exceptions should be raised to the calling code
         if isinstance(call_exception, Exception):
             raise call_exception
         elif not r:
-            raise Exception(f"Failed request, no request object")
+            raise Exception(f"Failed request, no request object ({getattr(apilog, 'exception_class', '')})")
         elif r.status_code != 200:
-            raise Exception(f"Failed request, status code {r.status_code}")
+            raise Exception(f"Failed request, status code {r.status_code} ({getattr(apilog, 'exception_class', '')})")
 
         return response_object
 
