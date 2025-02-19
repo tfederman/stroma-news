@@ -16,25 +16,55 @@ def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=4):
     # get all active feeds annotated with last fetch time and most recent article time
     feeds = Feed.select(Feed.id, Feed.uri, fn.max(FeedFetch.timestamp).alias("max_ts"), fn.max(Article.published_parsed).alias("max_pp")).join(FeedFetch).join(Article, JOIN.LEFT_OUTER).where(Feed.active==True).group_by(Feed).namedtuples()
 
-    # only include feeds that were not fetched too recently
-    feeds = [f for f in feeds if now-f.max_ts > timedelta(hours=recent_fetch_hours)]
+    return_feeds = []
 
-    # only include feeds that have had an article published recently
-    feeds = [f for f in feeds if (f.max_pp is not None) and (now-f.max_pp < timedelta(days=recent_fetch_content_days))]
+    for f in feeds:
+
+        if not f.max_pp:
+            continue
+
+        last_fetched = now - f.max_ts
+        last_article = now - f.max_pp
+
+        # include this one if very recently published but not fetched very recently
+        if last_fetched > timedelta(hours=6) and last_article < timedelta(days=4):
+            return_feeds.append(f)
+
+        # include this one if less recently published but not fetched less recently
+        elif last_fetched > timedelta(hours=48) and last_article < timedelta(days=14):
+            return_feeds.append(f)
+
+        # include this one if less recently published but not fetched less recently
+        elif last_fetched > timedelta(hours=96) and last_article < timedelta(days=30):
+            return_feeds.append(f)
+
+        # include this one if less recently published but not fetched less recently
+        elif last_fetched > timedelta(hours=168) and last_article < timedelta(days=90):
+            return_feeds.append(f)
+
+        # include this one if less recently published but not fetched less recently
+        elif last_fetched > timedelta(hours=336) and last_article < timedelta(days=180):
+            return_feeds.append(f)
 
     # add feeds that have never been fetched
-    feeds += list(Feed.select().join(FeedFetch, JOIN.LEFT_OUTER).where(FeedFetch.id==None, Feed.active==True))
+    return_feeds += list(Feed.select().join(FeedFetch, JOIN.LEFT_OUTER).where(FeedFetch.id==None, Feed.active==True))
 
-    return feeds
+    # to do - add (some) feeds that have been fetched but have no articles
+
+    return return_feeds
 
 
 def enqueue_fetch_tasks():
 
     q = Queue(QUEUE_NAME_FETCH, connection=Redis())
 
-    feeds_to_fetch = get_feeds_to_fetch()[:200]
+    feeds_to_fetch = get_feeds_to_fetch()
+    total_count = len(feeds_to_fetch)
+    feeds_to_fetch = feeds_to_fetch[:200]
 
     for n,feed in enumerate(feeds_to_fetch):
         log.info(f"{n+1:04}/{len(feeds_to_fetch):04} {feed.uri}")
         job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=14400)
         job_save  = q.enqueue(save_articles_task, depends_on=job_fetch, result_ttl=14400)
+
+    log.info(f"{len(feeds_to_fetch)} feeds queued out of {total_count} total feeds")
