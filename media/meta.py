@@ -10,21 +10,8 @@ from bs4 import BeautifulSoup
 from settings import log, TIMEZONE
 from database.models import Article, ArticleMeta, ArticleMetaAlt
 from utils.strutil import html_to_text
+from utils.http import get_http_headers
 
-REQUESTS_HEADERS = {
-     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
-     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-     "Accept-Language": "en-US,en;q=0.5",
-     "Accept-Encoding": "gzip, deflate, br",
-     "DNT": "1",
-     "Connection": "keep-alive",
-     "Upgrade-Insecure-Requests": "1",
-     "Sec-Fetch-Dest": "document",
-     "Sec-Fetch-Mode": "navigate",
-     "Sec-Fetch-Site": "same-origin",
-     "Sec-Fetch-User": "?1",
-     "Sec-GPC": "1"
-}
 
 def get_article_meta(article_id):
 
@@ -38,7 +25,7 @@ def get_article_meta(article_id):
     article_meta, _ = ArticleMeta.get_or_create(article=article)
 
     try:
-        r = requests.get(article.link, headers=REQUESTS_HEADERS, timeout=8)
+        r = requests.get(article.link, headers=get_http_headers(), timeout=8)
         article_meta.status = r.status_code
         assert r.status_code == 200, f"r.status_code in get_article_meta: {r.status_code}"
         bs = BeautifulSoup(r.text, 'html.parser')
@@ -109,7 +96,7 @@ def get_article_meta_alt(url):
         return
 
     try:
-        r = requests.get(url, headers=REQUESTS_HEADERS, timeout=8)
+        r = requests.get(url, headers=get_http_headers(), timeout=8)
         article_meta.status = r.status_code
         assert r.status_code == 200, f"r.status_code in get_article_meta: {r.status_code}"
         bs = BeautifulSoup(r.text, 'html.parser')
