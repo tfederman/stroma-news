@@ -61,6 +61,8 @@ def get_article_meta(article_id):
             except Exception as e:
                 pass
 
+        fix_image_links(article, article_meta)
+
         for tag in bs.find_all("link"):
             _type = tag.attrs.get("type") or ""
             href = tag.attrs.get("href")
@@ -75,6 +77,29 @@ def get_article_meta(article_id):
             pass
 
     article_meta.save()
+
+
+def fix_image_links(article, article_meta):
+    if not article_meta.og_image.startswith("http") or not article_meta.twitter_image.startswith("http"):
+        try:
+            p = urlparse(article.link)
+        except:
+            log.error(f"fix_image_links parse error for {article.link} ({article.id})")
+            return
+        prefix = f"{p.scheme}://{p.netloc}"
+        if article_meta.og_image.startswith("/"):
+            log.info(f"changing bad og_image link from {article_meta.og_image} to {prefix}{article_meta.og_image}")
+            article_meta.og_image = f"{prefix}{article_meta.og_image}"
+        elif not article_meta.og_image.startswith("http"):
+            log.info(f"changing bad og_image link from {article_meta.og_image} to {prefix}/{article_meta.og_image}")
+            article_meta.og_image = f"{prefix}/{article_meta.og_image}"
+
+        if article_meta.twitter_image.startswith("/"):
+            log.info(f"changing bad twitter_image link from {article_meta.twitter_image} to {prefix}{article_meta.twitter_image}")
+            article_meta.twitter_image = f"{prefix}{article_meta.twitter_image}"
+        elif not article_meta.twitter_image.startswith("http"):
+            log.info(f"changing bad twitter_image link from {article_meta.twitter_image} to {prefix}/{article_meta.twitter_image}")
+            article_meta.twitter_image = f"{prefix}/{article_meta.twitter_image}"
 
 
 def get_article_meta_alt(url):
