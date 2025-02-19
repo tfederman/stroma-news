@@ -48,7 +48,8 @@ def get_article_meta(article_id):
             except Exception as e:
                 pass
 
-        fix_image_links(article, article_meta)
+        fix_image_links(article, article_meta, "og_image")
+        fix_image_links(article, article_meta, "twitter_image")
 
         for tag in bs.find_all("link"):
             _type = tag.attrs.get("type") or ""
@@ -66,27 +67,23 @@ def get_article_meta(article_id):
     article_meta.save()
 
 
-def fix_image_links(article, article_meta):
-    if not article_meta.og_image.startswith("http") or not article_meta.twitter_image.startswith("http"):
-        try:
-            p = urlparse(article.link)
-        except:
-            log.error(f"fix_image_links parse error for {article.link} ({article.id})")
-            return
-        prefix = f"{p.scheme}://{p.netloc}"
-        if article_meta.og_image.startswith("/"):
-            log.info(f"changing bad og_image link from {article_meta.og_image} to {prefix}{article_meta.og_image}")
-            article_meta.og_image = f"{prefix}{article_meta.og_image}"
-        elif not article_meta.og_image.startswith("http"):
-            log.info(f"changing bad og_image link from {article_meta.og_image} to {prefix}/{article_meta.og_image}")
-            article_meta.og_image = f"{prefix}/{article_meta.og_image}"
+def fix_image_links(article, article_meta, property_name):
 
-        if article_meta.twitter_image.startswith("/"):
-            log.info(f"changing bad twitter_image link from {article_meta.twitter_image} to {prefix}{article_meta.twitter_image}")
-            article_meta.twitter_image = f"{prefix}{article_meta.twitter_image}"
-        elif not article_meta.twitter_image.startswith("http"):
-            log.info(f"changing bad twitter_image link from {article_meta.twitter_image} to {prefix}/{article_meta.twitter_image}")
-            article_meta.twitter_image = f"{prefix}/{article_meta.twitter_image}"
+    img = getattr(article_meta, property_name, None)
+    if not img or not img.strip() or img.startswith("http"):
+        return
+
+    try:
+        p = urlparse(article.link)
+    except:
+        log.warning(f"fix_image_links parse error for {article.link} ({article.id})")
+        return
+
+    prefix = f"{p.scheme}://{p.netloc}"
+    img = img.lstrip('/')
+    log.info(f"changing bad {property_name} link from {img} to {prefix}/{img}")
+    setattr(article_meta, property_name, f"{prefix}/{img}")
+
 
 
 if __name__=="__main__":
