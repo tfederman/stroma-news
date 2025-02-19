@@ -47,7 +47,7 @@ def get_http_image(url, accept_type=ACCEPT_TYPE_DEFAULT):
     if accept_type == ACCEPT_TYPE_DEFAULT and not is_likely_binary(r.content):
         return get_http_image(url, accept_type=ACCEPT_TYPE_IMAGES)
     elif accept_type == ACCEPT_TYPE_IMAGES and not is_likely_binary(r.content):
-        raise Exception(f"image for article {article.id} does not seem to be binary data (after retry) - {img_url}")
+        raise Exception(f"image for does not seem to be binary data (after retry) - {url}")
 
     return r.content, mimetype
 
