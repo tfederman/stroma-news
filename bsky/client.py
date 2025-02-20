@@ -58,12 +58,8 @@ class Session(object):
                 previous_db_cursor = BskyAPICursor.select().where(BskyAPICursor.endpoint==endpoint).order_by(BskyAPICursor.timestamp.desc()).first()
                 kwargs["cursor"] = previous_db_cursor.cursor if previous_db_cursor else ZERO_CURSOR
                 if kwargs["cursor"] == ZERO_CURSOR:
-                    log.info(f"use cursor {kwargs['cursor']} (default)")
                     previous_db_cursor = BskyAPICursor(cursor=ZERO_CURSOR)
-                else:
-                    log.info(f"use cursor {kwargs['cursor']} (db)")
             else:
-                log.info(f"use cursor {kwargs['cursor']} (arg)")
                 previous_db_cursor = None
 
             if paginate:
@@ -75,7 +71,6 @@ class Session(object):
 
             if previous_db_cursor and previous_db_cursor.cursor != final_cursor:
                 # only save a new cursor record if it's changed and originally came from the database (or inherited the default value)
-                log.info(f"save cursor {final_cursor} to database for endpoint {endpoint}")
                 BskyAPICursor.create(endpoint=endpoint, cursor=final_cursor)
 
             return response
@@ -86,11 +81,8 @@ class Session(object):
     def combine_paginated_responses(self, responses, collection_attr="logs"):
 
         for page_response in responses[1:]:
-            log.info(f"collection length: {len(getattr(responses[0], collection_attr))}")
             combined_collection = getattr(responses[0], collection_attr) + getattr(page_response, collection_attr)
             setattr(responses[0], collection_attr, combined_collection)
-
-        log.info(f"new collection length: {len(getattr(responses[0], collection_attr))}")
 
         return responses[0]
 
@@ -105,7 +97,6 @@ class Session(object):
         while True:
 
             iteration_count += 1
-            log.info(f"iteration_count {iteration_count}")
             if iteration_count > ITERATION_MAX:
                 raise ExcessiveIteration(f"tried to paginate through too many pages ({ITERATION_MAX})")
 
@@ -115,10 +106,7 @@ class Session(object):
             try:
                 new_cursor = response.cursor
                 if new_cursor == kwargs["cursor"]:
-                    log.info(f"iteration {iteration_count} resulted in same cursor, break ({new_cursor})")
                     break
-                else:
-                    log.info(f"iteration {iteration_count} produced new cursor ({kwargs['cursor']} -> {new_cursor})")
 
                 kwargs["cursor"] = new_cursor
 
