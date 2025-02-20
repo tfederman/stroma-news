@@ -193,7 +193,7 @@ def save_articles(fetch, fp, last_fetch):
         if existing_articles > 0:
             continue
 
-        if entry.link:
+        if getattr(entry, "link", None):
             existing_articles = Article.select().where(Article.link==entry.link).count()
             if existing_articles > 0:
                 log.info(f"skipping link {entry.link} which exists with a different entry id")
@@ -210,6 +210,7 @@ def save_articles(fetch, fp, last_fetch):
             pass
 
         if not article.link:
+            log.info(f"article with entry {article.entry_id} has no link")
             article.link = "(none)"
 
         # note - race condition possible if articles were inserted after the
