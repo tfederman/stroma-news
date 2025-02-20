@@ -25,7 +25,6 @@ class BskySession(BaseModel):
         table_name = "bsky_session"
 
 
-# to do - update feed set active='f' where uri like '%:RecentChanges%';
 class Feed(BaseModel):
     uri = CharField(unique=True)
     added_at = DateTimeField(default=datetime.now)
