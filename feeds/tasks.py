@@ -1,7 +1,7 @@
 import hashlib
 import json
 from time import struct_time, mktime, time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 from redis import Redis
 from rq import Queue, get_current_job
@@ -23,7 +23,19 @@ ABSOLUTE_EARLIEST_DATE = EARLIEST_DATE
 # to do - check last [n] fetches here, if all are errors, set feed inactive
 def fetch_feed_task(feed_id):
 
-    feed = Feed.get(feed_id)
+    try:
+        feed = Feed.get(Feed.id==feed_id, Feed.active==True)
+    except Feed.DoesNotExist:
+        log.info(f"active feed {feed.id} not found")
+        return
+
+    deactivate_feed_tokens = [":RecentChanges","/index.php?title="]
+    if any(t in feed.uri for t in deactivate_feed_tokens):
+        log.info(f"setting feed {feed.id} inactive because its uri looks undesirable")
+        feed.active = False
+        feed.save()
+        return
+
     last_fetch = get_last_fetch(feed)
 
     fetch = FeedFetch(feed=feed)
@@ -95,12 +107,9 @@ def fetch_feed_task(feed_id):
         log.warning(f"Couldn't update site_href: {e.__class__.__name__} - {e}")
 
     if feed.is_dirty():
-        if feed.title and feed.title.startswith("Comments on:"):
+        if feed.title and (feed.title.startswith("Comments on:") or feed.title.startswith("Comentarios en:")):
             log.info(f"setting feed {feed.id} inactive because it's a comments feed")
             feed.active = False
-            job = get_current_job()
-            job.meta["skip"] = True
-            job.save_meta()
 
         feed.save()
 
@@ -197,6 +206,13 @@ def save_articles(fetch, fp, last_fetch):
             existing_articles = Article.select().where(Article.link==entry.link).count()
             if existing_articles > 0:
                 log.info(f"skipping link {entry.link} which exists with a different entry id")
+                continue
+
+        title = getattr(entry, "title", "") or ""
+        if len(title) >= 30:
+            existing_article = Article.select().where(Article.title==title, Article.published_parsed >= datetime.now(UTC) - timedelta(hours=72)).first()
+            if existing_article:
+                log.info(f'skipping title "{title}" which exists already as recent article {existing_article.id}')
                 continue
 
         article = Article(feed_fetch=fetch, entry_id=entry.id)
