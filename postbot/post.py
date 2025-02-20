@@ -45,7 +45,7 @@ def post_article(article_id):
 
         post, remote_metadata_lookup = get_post(session, article)
 
-        terms = [line.strip() for line in open("ignore-terms.txt")]
+        terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
         external = post["embed"]["external"]
         filter_check_str = (external.get("title") or "") + (external.get("description") or "")
         if any(t.lower() in filter_check_str.lower() for t in terms):

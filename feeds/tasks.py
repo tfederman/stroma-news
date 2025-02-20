@@ -180,7 +180,7 @@ def save_articles_task(rebuild_for_user=None):
 
     for article in articles:
 
-        terms = [line.strip() for line in open("ignore-terms.txt")]
+        terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
         if any(t in (article.title or "").lower()+(article.summary or "").lower() for t in terms):
             continue
 
