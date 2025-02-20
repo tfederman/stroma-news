@@ -26,7 +26,7 @@ def fetch_feed_task(feed_id):
     try:
         feed = Feed.get(Feed.id==feed_id, Feed.active==True)
     except Feed.DoesNotExist:
-        log.info(f"active feed {feed.id} not found")
+        log.info(f"active feed {feed_id} not found")
         return None, None
 
     deactivate_feed_tokens = [":RecentChanges","/index.php?title="]

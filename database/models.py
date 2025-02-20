@@ -86,6 +86,9 @@ class ArticleMeta(BaseModel):
     og_description = CharField(null=True)
     twitter_description = CharField(null=True)
     rss_url = CharField(null=True)
+    html_attr_lang = CharField(null=True)
+    og_locale = CharField(null=True)
+    content_language = CharField(null=True)
 
     class Meta:
         table_name = "article_meta"

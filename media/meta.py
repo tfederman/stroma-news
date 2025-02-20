@@ -28,15 +28,18 @@ def get_article_meta(article_id):
         r = requests.get(article.link, headers=get_http_headers(), timeout=8)
         article_meta.status = r.status_code
         assert r.status_code == 200, f"r.status_code in get_article_meta: {r.status_code}"
+        article_meta.content_language = r.headers.get("Content-Language")
         bs = BeautifulSoup(r.text, 'html.parser')
 
         tags = {
             "og_title": lambda bs: bs.find("meta", property="og:title").attrs["content"],
             "og_url":   lambda bs: bs.find("meta", property="og:url").attrs["content"],
             "og_image": lambda bs: bs.find("meta", property="og:image").attrs["content"],
+            "og_locale":lambda bs: bs.find("meta", property="og:locale").attrs["content"],
             "og_description":      lambda bs: bs.find("meta", property="og:description").attrs["content"],
             "twitter_image":       lambda bs: bs.find_all("meta", attrs={"name":"twitter:image"})[0].attrs["content"],
             "twitter_description": lambda bs: bs.find_all("meta", attrs={"name":"twitter:description"})[0].attrs["content"],
+            "html_attr_lang":      lambda bs: bs.find("html").attrs.get("lang"),
         }
 
         for k,v in tags.items():
