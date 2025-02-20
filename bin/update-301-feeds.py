@@ -28,6 +28,7 @@ if __name__=="__main__":
         elif integrity_check_feed:
             print(f"Setting feed #{feed.id} inactive because it would create a dupe with #{integrity_check_feed.id} on {integrity_check_feed.uri}")
             feed_to_update.active = False
+            feed.state_change_reason = "updating uri would cause an integrity error"
             feed_to_update.save()
 
         else:

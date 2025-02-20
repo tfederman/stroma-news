@@ -33,6 +33,7 @@ class Feed(BaseModel):
     site_href = CharField(null=True)
     image_url = CharField(null=True)
     active = BooleanField(default=True)
+    state_change_reason = CharField(null=True)
 
 
 class FeedFetch(BaseModel):

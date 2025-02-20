@@ -19,24 +19,26 @@ from postbot.post import post_article
 LATEST_DATE   = datetime.today() + timedelta(days=2)
 EARLIEST_DATE = datetime.today() - timedelta(days=3)
 ABSOLUTE_EARLIEST_DATE = EARLIEST_DATE
+FEED_ERROR_THRESHOLD = 4
 
-# to do - check last [n] fetches here, if all are errors, set feed inactive
 def fetch_feed_task(feed_id):
 
     try:
         feed = Feed.get(Feed.id==feed_id, Feed.active==True)
     except Feed.DoesNotExist:
         log.info(f"active feed {feed.id} not found")
-        return
+        return None, None
 
     deactivate_feed_tokens = [":RecentChanges","/index.php?title="]
     if any(t in feed.uri for t in deactivate_feed_tokens):
         log.info(f"setting feed {feed.id} inactive because its uri looks undesirable")
+        feed.state_change_reason = "undesirable feed: misc"
         feed.active = False
         feed.save()
-        return
+        return None, None
 
-    last_fetch = get_last_fetch(feed)
+    recent_fetches = list(FeedFetch.select().where(FeedFetch.feed==feed).order_by(FeedFetch.timestamp.desc()).limit(FEED_ERROR_THRESHOLD-1))
+    last_fetch = recent_fetches[0] if recent_fetches else None
 
     fetch = FeedFetch(feed=feed)
 
@@ -109,6 +111,7 @@ def fetch_feed_task(feed_id):
     if feed.is_dirty():
         if feed.title and (feed.title.startswith("Comments on:") or feed.title.startswith("Comentarios en:")):
             log.info(f"setting feed {feed.id} inactive because it's a comments feed")
+            feed.state_change_reason = "undesirable feed: comments"
             feed.active = False
 
         feed.save()
@@ -124,6 +127,22 @@ def fetch_feed_task(feed_id):
 
     fetch.http_duration = http_duration
     fetch.save()
+
+    recent_fetches.append(fetch)
+
+    server_error_strings = ["URLError","RemoteDisconnected","JobTimeoutException","IncompleteRead"]
+    def error_fetch(f):
+        exception_text = (f.exception or "") + (f.bozo_exception or "")
+        status = f.status or 0
+        return status >= 400 or any(s in exception_text for s in server_error_strings)
+
+    if len(recent_fetches) >= FEED_ERROR_THRESHOLD and all(error_fetch(f) for f in recent_fetches):
+        log.warning(f"setting feed {feed.id} inactive because last {len(recent_fetches)} fetches resulted in an http error status code")
+        feed.active = False
+        feed.state_change_reason = "too many recent http errors"
+        feed.save()
+        return None, None
+
     return fetch, fp
 
 
@@ -141,12 +160,15 @@ def save_articles_task(rebuild_for_user=None):
 
     try:
         fetch, fp = job.result
+        if not fetch and not fp:
+            log.info(f"no results from fetch_feed_task job in save_articles_task, exiting")
+            return
     except:
         log.error(f"error fetching result for job {job.id} in save_articles_task")
         raise
 
     if not fetch.feed.active:
-        log.warning(f"exiting save_articles_task because feed {fetch.feed.id} is marked inactive")
+        log.warning(f"exiting save_articles_task because feed {fetch.feed.id} is marked inactive ({fetch.feed.state_change_reason})")
 
     articles = save_articles(fetch, fp)
     articles = [a for a in articles if a.link != "(none)"]
@@ -239,10 +261,3 @@ def save_articles(fetch, fp):
     fetch.articles_saved = len(saved_articles)
     fetch.save()
     return saved_articles
-
-
-def get_last_fetch(feed):
-    try:
-        return FeedFetch.select().where(FeedFetch.feed==feed).order_by(FeedFetch.timestamp.desc()).limit(1)[0]
-    except IndexError as e:
-        return None

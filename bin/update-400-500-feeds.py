@@ -28,4 +28,5 @@ if __name__=="__main__":
         if feed_to_update:
             log.info(f"Setting feed #{feed_to_update.id} inactive for status {status} ({count}) ({feed_to_update.uri})")
             feed_to_update.active = False
+            feed.state_change_reason = "too many recent http errors"
             feed_to_update.save()
