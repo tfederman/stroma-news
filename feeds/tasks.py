@@ -85,7 +85,7 @@ def fetch_feed_task(feed_id):
     if not fp:
         fetch.http_duration = http_duration
         fetch.save()
-        return fetch, fp, last_fetch
+        return fetch, fp
 
     # update feed database record if there are new values of certain fields
     for f in ["title","subtitle","image_url"]:
@@ -124,7 +124,7 @@ def fetch_feed_task(feed_id):
 
     fetch.http_duration = http_duration
     fetch.save()
-    return fetch, fp, last_fetch
+    return fetch, fp
 
 
 def save_articles_task(rebuild_for_user=None):
@@ -140,7 +140,7 @@ def save_articles_task(rebuild_for_user=None):
         return
 
     try:
-        fetch, fp, last_fetch = job.result
+        fetch, fp = job.result
     except:
         log.error(f"error fetching result for job {job.id} in save_articles_task")
         raise
@@ -148,7 +148,7 @@ def save_articles_task(rebuild_for_user=None):
     if not fetch.feed.active:
         log.warning(f"exiting save_articles_task because feed {fetch.feed.id} is marked inactive")
 
-    articles = save_articles(fetch, fp, last_fetch)
+    articles = save_articles(fetch, fp)
     articles = [a for a in articles if a.link != "(none)"]
 
     if not articles:
@@ -173,7 +173,7 @@ def save_articles_task(rebuild_for_user=None):
     return len(articles)
     
 
-def save_articles(fetch, fp, last_fetch):
+def save_articles(fetch, fp):
 
     saved_articles = []
     for n,entry in enumerate(fp.entries):
