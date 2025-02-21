@@ -227,14 +227,12 @@ def save_articles(fetch, fp):
         if getattr(entry, "link", None):
             existing_articles = Article.select().where(Article.link==entry.link).count()
             if existing_articles > 0:
-                log.info(f"skipping link {entry.link} which exists with a different entry id")
                 continue
 
         title = getattr(entry, "title", "") or ""
         if len(title) >= 30:
             existing_article = Article.select().where(Article.title==title, Article.published_parsed >= datetime.now(UTC) - timedelta(hours=72)).first()
             if existing_article:
-                log.info(f'skipping title "{title}" which exists already as recent article {existing_article.id}')
                 continue
 
         article = Article(feed_fetch=fetch, entry_id=entry.id)
