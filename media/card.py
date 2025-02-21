@@ -8,12 +8,12 @@ from database.models import ArticleMetaCardy
 from utils.image import get_http_image, ensure_resized_image
 
 
-def get_post(session, article):
+def get_post(bsky, article):
 
     # to do - should html_to_text happen earlier, before article is saved to db?
 
     article.title = html_to_text(article.title)
-    embed, cardy_lookup = get_link_card_embed(session, article)
+    embed, cardy_lookup = get_link_card_embed(bsky, article)
 
     text = []
 
@@ -63,7 +63,7 @@ def get_cardy_data(url):
         return {}
 
 
-def get_link_card_embed(session, article):
+def get_link_card_embed(bsky, article):
 
     try:
         img_url = article.articlemeta_set[0].og_image or article.articlemeta_set[0].twitter_image
@@ -108,7 +108,7 @@ def get_link_card_embed(session, article):
 
     if image_bytes:
         try:
-            upload_response = session.upload_file(image_bytes, mimetype)
+            upload_response = bsky.upload_file(image_bytes, mimetype)
             card["thumb"] = {
                 '$type': 'blob', 
                 'ref': {'$link': getattr(upload_response.blob.ref, '$link')}, 

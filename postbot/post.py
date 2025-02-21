@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 
 import redis
 
-from bsky import session
-from bsky.backoff import log_server_error, server_is_struggling
+from settings import bsky
+from utils.backoff import log_server_error, server_is_struggling
 from settings import log, TIMEZONE
 from media.card import get_post
 from database.models import Article, ArticlePost, ArticlePostRetry
@@ -43,7 +43,7 @@ def post_article(article_id):
             log.info(f"article {article.id} skipped in post_article because it's too old: {article.published_parsed}")
             return
 
-        post, remote_metadata_lookup = get_post(session, article)
+        post, remote_metadata_lookup = get_post(bsky, article)
 
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
         external = post["embed"]["external"]
@@ -51,7 +51,7 @@ def post_article(article_id):
         if any(t.lower() in filter_check_str.lower() for t in terms):
             return
 
-        response = session.create_post(post)
+        response = bsky.create_post(post)
         uri = response.uri
         post_id = response.uri.split("/")[-1]
         exception = None

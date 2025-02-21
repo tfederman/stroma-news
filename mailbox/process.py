@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from settings import log
-from database.models import ConvoMessage
 from mailbox.actions import subscribe, unsubscribe, add_filter, remove_filter
 
 
@@ -18,7 +17,6 @@ def process_message(cm):
         log.error(f"tried to process already-processed message {cm.id}")
         return
 
-    #for cm in ConvoMessage.select().where(ConvoMessage.processed_at.is_null()):
     try:
         action, obj = cm.text.strip().split(" ", 1)
     except Exception as e:

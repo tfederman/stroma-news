@@ -1,11 +1,13 @@
 from redis import Redis
 from rq import Queue
 
+from pysky.models import ConvoMessage
+
 from settings import log, QUEUE_NAME_FETCH
 from feeds.user import build_user_feed
 from feeds.tasks import fetch_feed_task, save_articles_task
 from utils.filesystem import upload_user_feed_to_s3
-from database.models import ConvoMessage, UserFeedSubscription, Feed, UserTextFilter
+from database.models import UserFeedSubscription, Feed, UserTextFilter
 
 
 class ActionFailed(Exception):

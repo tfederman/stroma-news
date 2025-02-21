@@ -2,8 +2,10 @@ import json
 import subprocess
 from itertools import groupby
 
+from pysky.models import BskyUserProfile
+
 from settings import log, S3_BUCKET, S3_PREFIX, LOCAL_FEED_PATH
-from database.models import Feed, Article, FeedFetch, BskyUserProfile, ArticlePost, UserFeedSubscription
+from database.models import Feed, Article, FeedFetch, ArticlePost, UserFeedSubscription
 
 DID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
 

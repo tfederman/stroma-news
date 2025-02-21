@@ -5,4 +5,6 @@ sudo systemctl start rqworker-fetch@3
 
 sudo systemctl start rqworker-post@1
 
+sudo systemctl start rqworker-mailbox
+
 # sudo journalctl -u rqworker-fetch@1 -f

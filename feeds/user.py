@@ -1,7 +1,9 @@
 import json
 
+from pysky.models import BskyUserProfile
+
 from settings import log, LOCAL_FEED_PATH
-from database.models import Feed, FeedFetch, Article, UserFeedSubscription, BskyUserProfile, ArticlePost
+from database.models import Feed, FeedFetch, Article, UserFeedSubscription, ArticlePost
 
 
 def apply_filters(posts):

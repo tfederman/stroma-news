@@ -3,6 +3,9 @@ import logging
 import sys
 from zoneinfo import ZoneInfo
 
+from pysky.client import BskyClient
+
+bsky = BskyClient()
 
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(logging.DEBUG)
