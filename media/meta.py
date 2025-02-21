@@ -47,7 +47,7 @@ def get_article_meta(article_id):
                 val = v(bs)
                 if "description" in k:
                     val = html_to_text(val)
-                setattr(article_meta, k, val)
+                setattr(article_meta, k, val.strip())
             except Exception as e:
                 pass
 
