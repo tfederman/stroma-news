@@ -33,8 +33,8 @@ def post_article(article_id):
             log.warning(f"tried to post article ({article.id}) but its feed is now inactive")
             return
 
-        if len(article.articlepost_set) > 0:
-            # if exception, allow retry?
+        # disallow repeat article post unless the prior attempt had an exception
+        if len(article.articlepost_set) > 0 and article.articlepost_set[0] is None:
             log.warning(f"tried to post article ({article.id}) that already has an article_post")
             return article.articlepost_set[0].id
 
@@ -62,8 +62,17 @@ def post_article(article_id):
         remote_metadata_lookup = "cardy_lookup: True" in str(e)
         log.error(f"error making post: {e.__class__.__name__} - {e}")
 
-    article_post = ArticlePost(uri=uri, post_id=post_id, article=article, exception=exception, remote_metadata_lookup=remote_metadata_lookup)
-    article_post.save()
+    if article.articlepost_set:
+        article_post = article.articlepost_set[0]
+        article_post.uri = uri
+        article_post.post_id = post_id
+        article_post.article = article
+        article_post.exception = exception
+        article_post.remote_metadata_lookup = remote_metadata_lookup
+        article_post.save()
+    else:
+        article_post = ArticlePost(uri=uri, post_id=post_id, article=article, exception=exception, remote_metadata_lookup=remote_metadata_lookup)
+        article_post.save()
 
     if exception and ("status code 500" in exception or "status code 502" in exception):
         log_server_error()
