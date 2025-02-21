@@ -9,7 +9,7 @@ from database.models import Feed, FeedFetch, Article
 from feeds.tasks import fetch_feed_task, save_articles_task
 
 
-def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=4):
+def get_feeds_to_fetch():
 
     now = datetime.now(TIMEZONE)
 
@@ -27,23 +27,23 @@ def get_feeds_to_fetch(recent_fetch_hours=6, recent_fetch_content_days=4):
         last_article = now - f.max_pp
 
         # include this one if very recently published but not fetched very recently
-        if last_fetched > timedelta(hours=6) and last_article < timedelta(days=4):
+        if last_fetched > timedelta(hours=8) and last_article < timedelta(days=2):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=48) and last_article < timedelta(days=14):
+        elif last_fetched > timedelta(hours=48) and last_article < timedelta(days=7):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=96) and last_article < timedelta(days=30):
+        elif last_fetched > timedelta(hours=96) and last_article < timedelta(days=14):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=168) and last_article < timedelta(days=90):
+        elif last_fetched > timedelta(hours=168) and last_article < timedelta(days=30):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=336) and last_article < timedelta(days=180):
+        elif last_fetched > timedelta(hours=336) and last_article < timedelta(days=90):
             return_feeds.append(f)
 
     # add feeds that have never been fetched
