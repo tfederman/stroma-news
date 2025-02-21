@@ -6,7 +6,7 @@ from rq import Queue
 from bsky import session
 from database.models import BskyUserProfile, ConvoMessage
 from settings import log, QUEUE_NAME_MAIL
-#from mailbox.process import process_messages
+from mailbox.process import process_message
 
 
 def get_and_save_messages():
@@ -15,7 +15,7 @@ def get_and_save_messages():
 
     # constant timestamp for messages received in this batch
     received_at = datetime.now()
-    counter = 0
+    messages = []
 
     for convo_log in convo_logs.logs:
         event_type = getattr(convo_log, "$type")
@@ -35,10 +35,12 @@ def get_and_save_messages():
             cm = ConvoMessage.create(message_id=convo_log.message.id, convo_id=convo_log.convoId,
                     sender_did=convo_log.message.sender.did, sender=profile, text=convo_log.message.text,
                     sent_at=convo_log.message.sentAt, received_at=received_at, facet_link=facet_link)
-            counter += 1
+            messages.append(cm)
 
-    if counter > 0:
+    messages += list(ConvoMessage.select().where(ConvoMessage.processed_at.is_null(), ConvoMessage.process_error.is_null()))
+
+    for cm in messages:
         q = Queue(QUEUE_NAME_MAIL, connection=Redis())
-        q.enqueue(process_messages, result_ttl=14400)
+        q.enqueue(process_message, cm, result_ttl=14400)
 
-    return counter
+    return len(messages)
