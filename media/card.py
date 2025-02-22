@@ -1,3 +1,4 @@
+import html
 from datetime import datetime, timezone
 
 import requests
@@ -18,10 +19,12 @@ def get_post(bsky, article):
     text = []
 
     if article.feed_fetch.feed.title:
+        article.feed_fetch.feed.title = html.unescape(article.feed_fetch.feed.title)
         text.append(f'Feed: "{article.feed_fetch.feed.title}"')
 
     if article.author:
         article.author = article.author.replace("(noreply@blogger.com)", "").strip()
+        article.author = html.unescape(article.author)
         if "unknown" in article.author.lower():
             article.author = ""
         article.author = html_to_text(article.author)
