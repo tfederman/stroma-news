@@ -8,7 +8,7 @@ from settings import bsky
 from utils.backoff import log_server_error, server_is_struggling
 from settings import log, TIMEZONE
 from media.card import get_post
-from database.models import Article, ArticlePost, ArticlePostRetry
+from database.models import Article, ArticlePost, ArticlePostRetry, FeedFetch, Feed
 
 
 def create_post_retry(article, article_post=None, td=None):
@@ -19,7 +19,7 @@ def create_post_retry(article, article_post=None, td=None):
 
 def post_article(article_id):
 
-    article = Article.get(Article.id==article_id)
+    article = Article.select(Article, FeedFetch, Feed).join(FeedFetch).join(Feed).where(Article.id==article_id)[0]
 
     struggling = server_is_struggling()
     if struggling:
@@ -30,7 +30,6 @@ def post_article(article_id):
     try:
 
         if not article.feed_fetch.feed.active:
-            log.warning(f"tried to post article ({article.id}) but its feed is now inactive")
             return
 
         # disallow repeat article post unless the prior attempt had an exception
@@ -47,7 +46,7 @@ def post_article(article_id):
 
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
         external = post["embed"]["external"]
-        filter_check_str = (external.get("title") or "") + (external.get("description") or "")
+        filter_check_str = (external.get("title") or "") + (external.get("description") or "") + article.link
         if any(t.lower() in filter_check_str.lower() for t in terms):
             return
 

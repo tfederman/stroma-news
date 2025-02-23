@@ -13,7 +13,7 @@ def get_post(bsky, article):
 
     # to do - should html_to_text happen earlier, before article is saved to db?
 
-    article.title = html_to_text(article.title)
+    article.title = html.unescape(html_to_text(article.title))
     embed, cardy_lookup = get_link_card_embed(bsky, article)
 
     text = []
@@ -62,7 +62,8 @@ def get_cardy_data(url):
         assert r.status_code == 200, f"HTTP error getting cardy data: {r.status_code} - {r.text}"
         return r.json()
     except Exception as e:
-        log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {str(e).strip()} - {url}")
+        if not "Unable to generate link preview" in str(e):
+            log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {str(e).strip()} - {url}")
         return {}
 
 
@@ -99,7 +100,7 @@ def get_link_card_embed(bsky, article):
     if not description:
         description = html_to_text(article.summary)
 
-    card = {"uri": article.link, "title": article.title or "", "description": description or ""}
+    card = {"uri": article.link.replace(" ","%20"), "title": article.title or "", "description": description or ""}
 
     image_bytes = None
     if img_url:

@@ -29,7 +29,7 @@ def fetch_feed_task(feed_id):
         log.info(f"active feed {feed_id} not found")
         return None, None
 
-    deactivate_feed_tokens = [":RecentChanges","/index.php?title="]
+    deactivate_feed_tokens = [":RecentChanges","/index.php?title=","bigcartel.com","buzzsprout.com"]
     if any(t in feed.uri for t in deactivate_feed_tokens):
         log.info(f"setting feed {feed.id} inactive because its uri looks undesirable")
         feed.state_change_reason = "undesirable feed: misc"
@@ -109,8 +109,8 @@ def fetch_feed_task(feed_id):
         log.warning(f"Couldn't update site_href: {e.__class__.__name__} - {e}")
 
     if feed.is_dirty():
-        if feed.title and (feed.title.startswith("Comments on:") or feed.title.startswith("Comentarios en:")):
-            log.info(f"setting feed {feed.id} inactive because it's a comments feed")
+        comments_feed_title_tokens = ["comments on:","comentarios en:","commentaires sur","reacties op:"]
+        if feed.title and any(feed.title.lower().startswith(t) for t in comments_feed_title_tokens):
             feed.state_change_reason = "undesirable feed: comments"
             feed.active = False
 
@@ -161,14 +161,10 @@ def save_articles_task(rebuild_for_user=None):
     try:
         fetch, fp = job.result
         if not fetch and not fp:
-            log.info(f"no results from fetch_feed_task job in save_articles_task, exiting")
             return
     except:
         log.error(f"error fetching result for job {job.id} in save_articles_task")
         raise
-
-    if not fetch.feed.active:
-        log.warning(f"exiting save_articles_task because feed {fetch.feed.id} is marked inactive ({fetch.feed.state_change_reason})")
 
     articles = save_articles(fetch, fp)
     articles = [a for a in articles if a.link != "(none)"]
@@ -181,7 +177,7 @@ def save_articles_task(rebuild_for_user=None):
     for article in articles:
 
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
-        if any(t in (article.title or "").lower()+(article.summary or "").lower() for t in terms):
+        if any(t in (article.title or "").lower()+(article.summary or "").lower()+article.link for t in terms):
             continue
 
         get_article_meta_job = queue_fetch.enqueue(get_article_meta, article.id, result_ttl=14400)
