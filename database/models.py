@@ -82,23 +82,6 @@ class ArticleMeta(BaseModel):
     class Meta:
         table_name = "article_meta"
 
-class ArticleMetaAlt(BaseModel):
-    url = CharField(null=True)
-    timestamp = DateTimeField(default=datetime.now)
-    og_title = CharField(null=True)
-    og_url = CharField(null=True)
-    og_image = CharField(null=True)
-    twitter_image = CharField(null=True)
-    status = IntegerField(null=True)
-    exception = CharField(null=True)
-    text = CharField(null=True)
-    og_description = CharField(null=True)
-    twitter_description = CharField(null=True)
-    rss_url = CharField(null=True)
-
-    class Meta:
-        table_name = "article_meta_alt"
-
 
 class ArticleMetaCardy(BaseModel):
     article = ForeignKeyField(Article, unique=True)

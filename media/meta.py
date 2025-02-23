@@ -1,14 +1,10 @@
-import time
-import json
-from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
-import peewee
 import requests
 from bs4 import BeautifulSoup
 
-from settings import log, TIMEZONE
-from database.models import Article, ArticleMeta, ArticleMetaAlt
+from settings import log
+from database.models import Article, ArticleMeta
 from utils.strutil import html_to_text
 from utils.http import get_http_headers
 
@@ -16,12 +12,6 @@ from utils.http import get_http_headers
 def get_article_meta(article_id):
 
     article = Article.get(Article.id==article_id)
-
-    TEMPORARY_EARLIEST_DATE = datetime.now(TIMEZONE) - timedelta(days=10)
-    if article.published_parsed and article.published_parsed <= TEMPORARY_EARLIEST_DATE:
-        log.warning(f"article {article.id} skipped in get_article_meta because it's too old: {article.published_parsed}")
-        return
-
     article_meta, _ = ArticleMeta.get_or_create(article=article)
 
     try:
@@ -86,13 +76,3 @@ def fix_image_links(article, article_meta, property_name):
     img = img.lstrip('/')
     log.info(f"changing bad {property_name} link from {img} to {prefix}/{img}")
     setattr(article_meta, property_name, f"{prefix}/{img}")
-
-
-
-if __name__=="__main__":
-
-    articles = Article.select().where(Article.link ** 'http%').order_by(peewee.fn.Random()).limit(20)
-    for n,article in enumerate(articles):
-        print(n, article.link)
-        article_meta = get_article_meta(article.id)
-        time.sleep(0.1)

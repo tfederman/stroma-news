@@ -13,7 +13,7 @@ def get_post(bsky, article):
 
     # to do - should html_to_text happen earlier, before article is saved to db?
 
-    article.title = html.unescape(html_to_text(article.title))
+    article.title = html.unescape(html_to_text(article.title) or "")
     embed, cardy_lookup = get_link_card_embed(bsky, article)
 
     text = []

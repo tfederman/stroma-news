@@ -28,7 +28,6 @@ def post_article(article_id):
         return
 
     try:
-
         if not article.feed_fetch.feed.active:
             return
 
@@ -36,11 +35,6 @@ def post_article(article_id):
         if len(article.articlepost_set) > 0 and article.articlepost_set[0] is None:
             log.warning(f"tried to post article ({article.id}) that already has an article_post")
             return article.articlepost_set[0].id
-
-        TEMPORARY_EARLIEST_DATE = datetime.now(TIMEZONE) - timedelta(days=10)
-        if article.published_parsed and article.published_parsed <= TEMPORARY_EARLIEST_DATE:
-            log.info(f"article {article.id} skipped in post_article because it's too old: {article.published_parsed}")
-            return
 
         post, remote_metadata_lookup = get_post(bsky, article)
 
