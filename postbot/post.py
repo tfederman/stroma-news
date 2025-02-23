@@ -21,6 +21,13 @@ def post_article(article_id):
 
     article = Article.select(Article, FeedFetch, Feed).join(FeedFetch).join(Feed).where(Article.id==article_id)[0]
 
+    try:
+        html_attr_lang = article.articlemeta_set[0].html_attr_lang.strip().lower()
+        if html_attr_lang and not html_attr_lang.startswith("en"):
+            log.warning(f"not posting article {article.id} because of language '{html_attr_lang}'")
+    except:
+        pass
+
     struggling = server_is_struggling()
     if struggling:
         log.warning(f"not posting article {article.id} because of too many recent 500 errors (creating retry)")
