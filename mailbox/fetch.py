@@ -3,7 +3,7 @@ from datetime import datetime
 from redis import Redis
 from rq import Queue
 
-from pysky.models import BskyUserProfile, ConvoMessage
+from pysky.models import ConvoMessage
 
 from settings import log, QUEUE_NAME_MAIL, bsky
 from mailbox.process import process_message
@@ -33,7 +33,7 @@ def get_and_save_messages():
         event_type = getattr(convo_log, "$type")
         if event_type == "chat.bsky.convo.defs#logCreateMessage":
             try:
-                profile = BskyUserProfile.get_or_create_from_api(convo_log.message.sender.did, bsky)
+                profile = bsky.get_user_profile(convo_log.message.sender.did)
             except Exception as e:
                 if "AccountTakedown" in str(e):
                     log.info(f"Sender account {convo_log.message.sender.did} no longer exists: AccountTakedown")

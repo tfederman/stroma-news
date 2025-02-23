@@ -3,7 +3,7 @@ import logging
 import sys
 from zoneinfo import ZoneInfo
 
-from pysky.client import BskyClient
+from pysky import BskyClient
 
 bsky = BskyClient()
 

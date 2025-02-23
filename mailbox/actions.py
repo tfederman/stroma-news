@@ -1,8 +1,6 @@
 from redis import Redis
 from rq import Queue
 
-from pysky.models import ConvoMessage
-
 from settings import log, QUEUE_NAME_FETCH
 from feeds.user import build_user_feed
 from feeds.tasks import fetch_feed_task, save_articles_task

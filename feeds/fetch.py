@@ -60,7 +60,7 @@ def enqueue_fetch_tasks():
 
     feeds_to_fetch = get_feeds_to_fetch()
     total_count = len(feeds_to_fetch)
-    feeds_to_fetch = feeds_to_fetch[:200]
+    feeds_to_fetch = feeds_to_fetch[:120]
 
     for n,feed in enumerate(feeds_to_fetch):
         job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=14400)
