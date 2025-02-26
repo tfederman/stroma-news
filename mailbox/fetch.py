@@ -3,8 +3,7 @@ from datetime import datetime
 from redis import Redis
 from rq import Queue
 
-from pysky.models import ConvoMessage
-
+from database.models import ConvoMessage
 from settings import log, QUEUE_NAME_MAIL, bsky
 from mailbox.process import process_message
 

@@ -114,9 +114,9 @@ def get_link_card_embed(bsky, article):
         try:
             upload_response = bsky.upload_blob(image_bytes, mimetype)
             card["thumb"] = {
-                '$type': 'blob', 
-                'ref': {'$link': getattr(upload_response.blob.ref, '$link')}, 
-                'mimeType': upload_response.blob.mimeType, 
+                '$type': 'blob',
+                'ref': {'$link': getattr(upload_response.blob.ref, '$link')},
+                'mimeType': upload_response.blob.mimeType,
                 'size': upload_response.blob.size,
             }
         except Exception as e:

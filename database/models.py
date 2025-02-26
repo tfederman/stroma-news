@@ -118,6 +118,22 @@ class ArticlePostRetry(BaseModel):
         table_name = "article_post_retry"
 
 
+class ConvoMessage(BaseModel):
+    message_id = CharField(unique=True)
+    convo_id = CharField()
+    sender_did = CharField()
+    sender = ForeignKeyField(BskyUserProfile)
+    text = CharField()
+    sent_at = DateTimeField()
+    received_at = DateTimeField(default=datetime.now)
+    processed_at = DateTimeField(null=True)
+    process_error = CharField(null=True)
+    facet_link = CharField()
+
+    class Meta:
+        table_name = "convo_message"
+
+
 class UserFeedSubscription(BaseModel):
     user = ForeignKeyField(BskyUserProfile)
     feed = ForeignKeyField(Feed)

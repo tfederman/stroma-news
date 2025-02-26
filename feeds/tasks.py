@@ -72,7 +72,8 @@ def fetch_feed_task(feed_id):
     bozo_exception = getattr(fp, "bozo_exception", None)
     if isinstance(bozo_exception, Exception):
         fetch.bozo_exception = f"{bozo_exception.__class__.__name__} - {bozo_exception}"
-        log.warning(f"bozo exception for {feed.uri}: {fetch.bozo_exception}")
+        if not "but parsed as" in fetch.bozo_exception and not "NonXMLContentType" in fetch.bozo_exception:
+            log.warning(f"bozo exception for {feed.uri}: {fetch.bozo_exception}")
 
 
     # signal the following async job to skip itself. it's already been queued at this point.

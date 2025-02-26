@@ -27,7 +27,7 @@ def get_feeds_to_fetch():
         last_article = now - f.max_pp
 
         # include this one if very recently published but not fetched very recently
-        if last_fetched > timedelta(hours=8) and last_article < timedelta(days=2):
+        if last_fetched > timedelta(hours=6) and last_article < timedelta(days=2):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
@@ -35,15 +35,15 @@ def get_feeds_to_fetch():
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=96) and last_article < timedelta(days=14):
+        elif last_fetched > timedelta(hours=48) and last_article < timedelta(days=14):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=168) and last_article < timedelta(days=30):
+        elif last_fetched > timedelta(hours=96) and last_article < timedelta(days=30):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=336) and last_article < timedelta(days=90):
+        elif last_fetched > timedelta(hours=168) and last_article < timedelta(days=90):
             return_feeds.append(f)
 
     # add feeds that have never been fetched
@@ -60,7 +60,7 @@ def enqueue_fetch_tasks():
 
     feeds_to_fetch = get_feeds_to_fetch()
     total_count = len(feeds_to_fetch)
-    feeds_to_fetch = feeds_to_fetch[:120]
+    feeds_to_fetch = feeds_to_fetch[:150]
 
     for n,feed in enumerate(feeds_to_fetch):
         job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=14400)

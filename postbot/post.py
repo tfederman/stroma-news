@@ -24,7 +24,7 @@ def post_article(article_id):
     try:
         html_attr_lang = article.articlemeta_set[0].html_attr_lang.strip().lower()
         if html_attr_lang and not html_attr_lang.startswith("en"):
-            log.warning(f"not posting article {article.id} because of language '{html_attr_lang}'")
+            return
     except:
         pass
 
@@ -39,7 +39,7 @@ def post_article(article_id):
             return
 
         # disallow repeat article post unless the prior attempt had an exception
-        if len(article.articlepost_set) > 0 and article.articlepost_set[0] is None:
+        if len(article.articlepost_set) > 0 and article.articlepost_set[0].exception is None:
             log.warning(f"tried to post article ({article.id}) that already has an article_post")
             return article.articlepost_set[0].id
 
