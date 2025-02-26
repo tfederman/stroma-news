@@ -275,16 +275,7 @@ def save_articles(fetch, fp):
 
         article = Article(feed_fetch=fetch, entry_id=entry.id)
 
-        for field in [
-            "title",
-            "summary",
-            "author",
-            "link",
-            "updated",
-            "updated_parsed",
-            "published",
-            "published_parsed",
-        ]:
+        for field in ["title","summary","author","link","updated","updated_parsed","published","published_parsed"]:
             setattr(article, field, getattr(entry, field, None))
 
         try:
