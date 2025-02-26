@@ -19,19 +19,23 @@ def migrate_pgsql(cls, con):
 
 def get_model_classes():
     class_members = inspect.getmembers(sys.modules["database.models"], inspect.isclass)
-    return [(n,cls) for n,cls in class_members if cls.__base__ == database.models.BaseModel]
+    return [(n, cls) for n, cls in class_members if cls.__base__ == database.models.BaseModel]
 
 
 def create_non_existing_tables(db):
 
     all_model_classes = get_model_classes()
-    missing_table_model_classes = [(n,cls) for n,cls in all_model_classes if not cls.table_exists()]
+    missing_table_model_classes = [
+        (n, cls) for n, cls in all_model_classes if not cls.table_exists()
+    ]
 
     if not missing_table_model_classes:
         print("All tables already exist.")
     else:
-        print(f"Creating missing tables: {', '.join(str(cls._meta.table_name) for n,cls in missing_table_model_classes)}")
-        db.create_tables([cls for n,cls in missing_table_model_classes])
+        print(
+            f"Creating missing tables: {', '.join(str(cls._meta.table_name) for n,cls in missing_table_model_classes)}"
+        )
+        db.create_tables([cls for n, cls in missing_table_model_classes])
 
 
 if __name__=="__main__":

@@ -38,33 +38,43 @@ def get_feed_skeleton(event):
         did = DEFAULT_DID
         default_did = True
 
-    print(f"+++ feed: {short_feed_id}, limit: {limit}, cursor: {cursor}, did: {did}{' (default)' if default_did else ''}")
+    print(
+        f"+++ feed: {short_feed_id}, limit: {limit}, cursor: {cursor}, did: {did}{' (default)' if default_did else ''}"
+    )
 
     feed = get_feed_items(short_feed_id, did, limit, cursor)
     items_sent = len(feed["feed"])
     send_sqs("success", short_feed_id, limit, cursor, did, items_sent)
 
     return {
-        'statusCode': 200,
-        'body': json.dumps(feed),
+        "statusCode": 200,
+        "body": json.dumps(feed),
     }
 
 
 def describe_feed_generator(event):
-    return response({'encoding': 'application/json',
-                        'body': {'did': f'did:web:{CUSTOM_FEED_HOSTNAME}',
-                        'feeds': FEEDS}})
+    return response(
+        {
+            "encoding": "application/json",
+            "body": {"did": f"did:web:{CUSTOM_FEED_HOSTNAME}", "feeds": FEEDS},
+        }
+    )
+
 
 def did_json(event):
-    r = {'@context': ['https://www.w3.org/ns/did/v1'],
-            'id': f'did:web:{CUSTOM_FEED_HOSTNAME}',
-            'service': [{
-                'id': '#bsky_fg',
-                'type': 'BskyFeedGenerator',
-                'serviceEndpoint': f'https://{CUSTOM_FEED_HOSTNAME}'
-            }]
-        }
+    r = {
+        "@context": ["https://www.w3.org/ns/did/v1"],
+        "id": f"did:web:{CUSTOM_FEED_HOSTNAME}",
+        "service": [
+            {
+                "id": "#bsky_fg",
+                "type": "BskyFeedGenerator",
+                "serviceEndpoint": f"https://{CUSTOM_FEED_HOSTNAME}",
+            }
+        ],
+    }
     return response(r)
 
+
 def default(event, suffix=""):
-    return response({'statusCode': 200, 'body': f'Stroma feed generator{suffix}'})
+    return response({"statusCode": 200, "body": f"Stroma feed generator{suffix}"})

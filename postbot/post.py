@@ -19,7 +19,12 @@ def create_post_retry(article, article_post=None, td=None):
 
 def post_article(article_id):
 
-    article = Article.select(Article, FeedFetch, Feed).join(FeedFetch).join(Feed).where(Article.id==article_id)[0]
+    article = (
+        Article.select(Article, FeedFetch, Feed)
+        .join(FeedFetch)
+        .join(Feed)
+        .where(Article.id == article_id)[0]
+    )
 
     try:
         html_attr_lang = article.articlemeta_set[0].html_attr_lang.strip().lower()
@@ -30,7 +35,9 @@ def post_article(article_id):
 
     struggling = server_is_struggling()
     if struggling:
-        log.warning(f"not posting article {article.id} because of too many recent 500 errors (creating retry)")
+        log.warning(
+            f"not posting article {article.id} because of too many recent 500 errors (creating retry)"
+        )
         create_post_retry(article)
         return
 
@@ -47,7 +54,9 @@ def post_article(article_id):
 
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
         external = post["embed"]["external"]
-        filter_check_str = (external.get("title") or "") + (external.get("description") or "") + article.link
+        filter_check_str = (
+            (external.get("title") or "") + (external.get("description") or "") + article.link
+        )
         if any(t.lower() in filter_check_str.lower() for t in terms):
             return
 
@@ -71,7 +80,13 @@ def post_article(article_id):
         article_post.remote_metadata_lookup = remote_metadata_lookup
         article_post.save()
     else:
-        article_post = ArticlePost(uri=uri, post_id=post_id, article=article, exception=exception, remote_metadata_lookup=remote_metadata_lookup)
+        article_post = ArticlePost(
+            uri=uri,
+            post_id=post_id,
+            article=article,
+            exception=exception,
+            remote_metadata_lookup=remote_metadata_lookup,
+        )
         article_post.save()
 
     if exception and ("status code 500" in exception or "status code 502" in exception):

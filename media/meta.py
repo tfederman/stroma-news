@@ -11,7 +11,7 @@ from utils.http import get_http_headers
 
 def get_article_meta(article_id):
 
-    article = Article.get(Article.id==article_id)
+    article = Article.get(Article.id == article_id)
     article_meta, _ = ArticleMeta.get_or_create(article=article)
 
     try:
@@ -47,7 +47,9 @@ def get_article_meta(article_id):
         for tag in bs.find_all("link"):
             _type = tag.attrs.get("type") or ""
             href = tag.attrs.get("href")
-            if (_type.startswith("application/rss") or _type.startswith("application/atom")) and href:
+            if (
+                _type.startswith("application/rss") or _type.startswith("application/atom")
+            ) and href:
                 article_meta.rss_url = href
 
     except Exception as e:
@@ -73,6 +75,6 @@ def fix_image_links(article, article_meta, property_name):
         return
 
     prefix = f"{p.scheme}://{p.netloc}"
-    img = img.lstrip('/')
+    img = img.lstrip("/")
     log.info(f"changing bad {property_name} link from {img} to {prefix}/{img}")
     setattr(article_meta, property_name, f"{prefix}/{img}")

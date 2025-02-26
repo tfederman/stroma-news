@@ -15,6 +15,6 @@ def upload_user_feed_to_s3(user):
     short_did = user.did.replace("did:plc:", "")
     filename = f"{LOCAL_FEED_PATH}/{short_did}.json"
     feed_json = open(filename).read()
-    client = boto3.client('s3')
+    client = boto3.client("s3")
     client.put_object(Body=feed_json, Bucket=S3_BUCKET, Key=f"{S3_PREFIX}/{short_did}.json")
     return f"{S3_PREFIX}/{short_did}.json"

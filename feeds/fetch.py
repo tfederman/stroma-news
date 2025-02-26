@@ -14,7 +14,19 @@ def get_feeds_to_fetch():
     now = datetime.now(TIMEZONE)
 
     # get all active feeds annotated with last fetch time and most recent article time
-    feeds = Feed.select(Feed.id, Feed.uri, fn.max(FeedFetch.timestamp).alias("max_ts"), fn.max(Article.published_parsed).alias("max_pp")).join(FeedFetch).join(Article, JOIN.LEFT_OUTER).where(Feed.active==True).group_by(Feed).namedtuples()
+    feeds = (
+        Feed.select(
+            Feed.id,
+            Feed.uri,
+            fn.max(FeedFetch.timestamp).alias("max_ts"),
+            fn.max(Article.published_parsed).alias("max_pp"),
+        )
+        .join(FeedFetch)
+        .join(Article, JOIN.LEFT_OUTER)
+        .where(Feed.active == True)
+        .group_by(Feed)
+        .namedtuples()
+    )
 
     return_feeds = []
 
@@ -47,7 +59,11 @@ def get_feeds_to_fetch():
             return_feeds.append(f)
 
     # add feeds that have never been fetched
-    return_feeds += list(Feed.select().join(FeedFetch, JOIN.LEFT_OUTER).where(FeedFetch.id==None, Feed.active==True))
+    return_feeds += list(
+        Feed.select()
+        .join(FeedFetch, JOIN.LEFT_OUTER)
+        .where(FeedFetch.id == None, Feed.active == True)
+    )
 
     # to do - add (some) feeds that have been fetched but have no articles
 
@@ -62,8 +78,8 @@ def enqueue_fetch_tasks():
     total_count = len(feeds_to_fetch)
     feeds_to_fetch = feeds_to_fetch[:150]
 
-    for n,feed in enumerate(feeds_to_fetch):
+    for n, feed in enumerate(feeds_to_fetch):
         job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=14400)
-        job_save  = q.enqueue(save_articles_task, depends_on=job_fetch, result_ttl=14400)
+        job_save = q.enqueue(save_articles_task, depends_on=job_fetch, result_ttl=14400)
 
     log.info(f"{len(feeds_to_fetch)} feeds queued out of {total_count} total feeds")

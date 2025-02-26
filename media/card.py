@@ -36,11 +36,13 @@ def get_post(bsky, article):
     timestamp_format = "%A, %B %-d, %Y"
 
     if article.author and article.published_parsed:
-        text.append(f'By: {article.author} on {article.published_parsed.strftime(timestamp_format)}')
+        text.append(
+            f"By: {article.author} on {article.published_parsed.strftime(timestamp_format)}"
+        )
     elif article.author and not article.published_parsed:
-        text.append(f'By: {article.author}')
+        text.append(f"By: {article.author}")
     elif article.published_parsed and not article.author:
-        text.append(f'Published on {article.published_parsed.strftime(timestamp_format)}')
+        text.append(f"Published on {article.published_parsed.strftime(timestamp_format)}")
 
     # "Invalid app.bsky.feed.post record: Record/text must not be longer than 300 graphemes"
     while len("\n".join(text)) > 300:
@@ -63,7 +65,9 @@ def get_cardy_data(url):
         return r.json()
     except Exception as e:
         if not "Unable to generate link preview" in str(e):
-            log.warning(f"Error fetching cardy data: {e.__class__.__name__} - {str(e).strip()} - {url}")
+            log.warning(
+                f"Error fetching cardy data: {e.__class__.__name__} - {str(e).strip()} - {url}"
+            )
         return {}
 
 
@@ -71,7 +75,10 @@ def get_link_card_embed(bsky, article):
 
     try:
         img_url = article.articlemeta_set[0].og_image or article.articlemeta_set[0].twitter_image
-        description = article.articlemeta_set[0].og_description or article.articlemeta_set[0].twitter_description
+        description = (
+            article.articlemeta_set[0].og_description
+            or article.articlemeta_set[0].twitter_description
+        )
     except:
         img_url = None
         description = None
@@ -100,7 +107,11 @@ def get_link_card_embed(bsky, article):
     if not description:
         description = html_to_text(article.summary)
 
-    card = {"uri": article.link.replace(" ","%20"), "title": article.title or "", "description": description or ""}
+    card = {
+        "uri": article.link.replace(" ", "%20"),
+        "title": article.title or "",
+        "description": description or "",
+    }
 
     image_bytes = None
     if img_url:
@@ -108,19 +119,23 @@ def get_link_card_embed(bsky, article):
             image_bytes, mimetype = get_http_image(img_url)
             image_bytes = ensure_resized_image(image_bytes)
         except Exception as e:
-            log.warning(f"can't fetch image, posting anyway ({article.id}): {e.__class__.__name__} - {e}")
+            log.warning(
+                f"can't fetch image, posting anyway ({article.id}): {e.__class__.__name__} - {e}"
+            )
 
     if image_bytes:
         try:
             upload_response = bsky.upload_blob(image_bytes, mimetype)
             card["thumb"] = {
-                '$type': 'blob',
-                'ref': {'$link': getattr(upload_response.blob.ref, '$link')},
-                'mimeType': upload_response.blob.mimeType,
-                'size': upload_response.blob.size,
+                "$type": "blob",
+                "ref": {"$link": getattr(upload_response.blob.ref, "$link")},
+                "mimeType": upload_response.blob.mimeType,
+                "size": upload_response.blob.size,
             }
         except Exception as e:
-            log.error(f"exception while uploading image for article {article.id} ({img_url}): {e.__class__.__name__} - {e}")
+            log.error(
+                f"exception while uploading image for article {article.id} ({img_url}): {e.__class__.__name__} - {e}"
+            )
             raise
 
     return {

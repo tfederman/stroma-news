@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, UTC
 from redis import Redis
 from rq import Queue, get_current_job
 import feedparser
+
 feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
 
 from settings import log, QUEUE_NAME_FETCH, QUEUE_NAME_POST
@@ -16,20 +17,26 @@ from utils.filesystem import upload_user_feed_to_s3
 from postbot.post import post_article
 
 
-LATEST_DATE   = datetime.today() + timedelta(days=2)
+LATEST_DATE = datetime.today() + timedelta(days=2)
 EARLIEST_DATE = datetime.today() - timedelta(days=3)
 ABSOLUTE_EARLIEST_DATE = EARLIEST_DATE
 FEED_ERROR_THRESHOLD = 4
 
+
 def fetch_feed_task(feed_id):
 
     try:
-        feed = Feed.get(Feed.id==feed_id, Feed.active==True)
+        feed = Feed.get(Feed.id == feed_id, Feed.active == True)
     except Feed.DoesNotExist:
         log.info(f"active feed {feed_id} not found")
         return None, None
 
-    deactivate_feed_tokens = [":RecentChanges","/index.php?title=","bigcartel.com","buzzsprout.com"]
+    deactivate_feed_tokens = [
+        ":RecentChanges",
+        "/index.php?title=",
+        "bigcartel.com",
+        "buzzsprout.com",
+    ]
     if any(t in feed.uri for t in deactivate_feed_tokens):
         log.info(f"setting feed {feed.id} inactive because its uri looks undesirable")
         feed.state_change_reason = "undesirable feed: misc"
@@ -37,7 +44,12 @@ def fetch_feed_task(feed_id):
         feed.save()
         return None, None
 
-    recent_fetches = list(FeedFetch.select().where(FeedFetch.feed==feed).order_by(FeedFetch.timestamp.desc()).limit(FEED_ERROR_THRESHOLD-1))
+    recent_fetches = list(
+        FeedFetch.select()
+        .where(FeedFetch.feed == feed)
+        .order_by(FeedFetch.timestamp.desc())
+        .limit(FEED_ERROR_THRESHOLD - 1)
+    )
     last_fetch = recent_fetches[0] if recent_fetches else None
 
     fetch = FeedFetch(feed=feed)
@@ -72,15 +84,20 @@ def fetch_feed_task(feed_id):
     bozo_exception = getattr(fp, "bozo_exception", None)
     if isinstance(bozo_exception, Exception):
         fetch.bozo_exception = f"{bozo_exception.__class__.__name__} - {bozo_exception}"
-        if not "but parsed as" in fetch.bozo_exception and not "NonXMLContentType" in fetch.bozo_exception:
+        if (
+            not "but parsed as" in fetch.bozo_exception
+            and not "NonXMLContentType" in fetch.bozo_exception
+        ):
             log.warning(f"bozo exception for {feed.uri}: {fetch.bozo_exception}")
-
 
     # signal the following async job to skip itself. it's already been queued at this point.
     bozo_exception = fetch.bozo_exception or ""
-    if fp is None or getattr(fp, "status", 999) >= 400 \
-            or "SAXParseException" in bozo_exception \
-            or "URLError" in bozo_exception:
+    if (
+        fp is None
+        or getattr(fp, "status", 999) >= 400
+        or "SAXParseException" in bozo_exception
+        or "URLError" in bozo_exception
+    ):
         job = get_current_job()
         job.meta["skip"] = True
         job.save_meta()
@@ -91,7 +108,7 @@ def fetch_feed_task(feed_id):
         return fetch, fp
 
     # update feed database record if there are new values of certain fields
-    for f in ["title","subtitle","image_url"]:
+    for f in ["title", "subtitle", "image_url"]:
         model_value = getattr(feed, f, None)
         fetched_value = getattr(fp.feed, f, None)
 
@@ -161,7 +178,7 @@ def save_articles_task(rebuild_for_user=None):
 
     current_job = get_current_job()
     job = queue_fetch.fetch_job(current_job.dependency.id)
-    
+
     if job.meta.get("skip"):
         return
 
@@ -184,67 +201,94 @@ def save_articles_task(rebuild_for_user=None):
     for article in articles:
 
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
-        if any(t in (article.title or "").lower()+(article.summary or "").lower()+article.link for t in terms):
+        if any(
+            t in (article.title or "").lower() + (article.summary or "").lower() + article.link
+            for t in terms
+        ):
             continue
 
         get_article_meta_job = queue_fetch.enqueue(get_article_meta, article.id, result_ttl=14400)
-        post_article_job = queue_post.enqueue(post_article, article.id, depends_on=get_article_meta_job, result_ttl=14400)
+        post_article_job = queue_post.enqueue(
+            post_article, article.id, depends_on=get_article_meta_job, result_ttl=14400
+        )
         post_article_jobs.append(post_article_job)
 
     if rebuild_for_user:
-        build_user_feed_job = queue_fetch.enqueue(build_user_feed, rebuild_for_user, depends_on=post_article_jobs)
-        upload_job = queue_fetch.enqueue(upload_user_feed_to_s3, rebuild_for_user, depends_on=build_user_feed_job)
+        build_user_feed_job = queue_fetch.enqueue(
+            build_user_feed, rebuild_for_user, depends_on=post_article_jobs
+        )
+        upload_job = queue_fetch.enqueue(
+            upload_user_feed_to_s3, rebuild_for_user, depends_on=build_user_feed_job
+        )
 
     return len(articles)
-    
+
 
 def save_articles(fetch, fp):
 
     saved_articles = []
-    for n,entry in enumerate(fp.entries):
+    for n, entry in enumerate(fp.entries):
 
         # convert these fields to datetime objects
-        for field in ["published_parsed","updated_parsed"]:
+        for field in ["published_parsed", "updated_parsed"]:
             try:
                 setattr(entry, field, datetime.fromtimestamp(mktime(getattr(entry, field))))
             except:
                 setattr(entry, field, None)
 
         # save article if this feed has never been fetched before, or if it falls in the date window
-        if (entry.published_parsed and entry.published_parsed < EARLIEST_DATE) \
-            or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE) \
-            or (entry.published_parsed and entry.published_parsed > LATEST_DATE) \
-            or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE):
+        if (
+            (entry.published_parsed and entry.published_parsed < EARLIEST_DATE)
+            or (entry.updated_parsed and entry.updated_parsed < EARLIEST_DATE)
+            or (entry.published_parsed and entry.published_parsed > LATEST_DATE)
+            or (entry.updated_parsed and entry.updated_parsed > LATEST_DATE)
+        ):
             continue
 
         if not hasattr(entry, "id"):
             try:
-                entry.id = hashlib.sha1(entry.link.encode('utf-8')).hexdigest()
+                entry.id = hashlib.sha1(entry.link.encode("utf-8")).hexdigest()
             except AttributeError:
-                entry.id = hashlib.sha1(str(entry).encode('utf-8')).hexdigest()
-        
-        existing_articles = Article.select().where(Article.entry_id==entry.id).count()
+                entry.id = hashlib.sha1(str(entry).encode("utf-8")).hexdigest()
+
+        existing_articles = Article.select().where(Article.entry_id == entry.id).count()
         if existing_articles > 0:
             continue
 
         if getattr(entry, "link", None):
-            existing_articles = Article.select().where(Article.link==entry.link).count()
+            existing_articles = Article.select().where(Article.link == entry.link).count()
             if existing_articles > 0:
                 continue
 
         title = getattr(entry, "title", "") or ""
         if len(title) >= 30:
-            existing_article = Article.select().where(Article.title==title, Article.published_parsed >= datetime.now(UTC) - timedelta(hours=72)).first()
+            existing_article = (
+                Article.select()
+                .where(
+                    Article.title == title,
+                    Article.published_parsed >= datetime.now(UTC) - timedelta(hours=72),
+                )
+                .first()
+            )
             if existing_article:
                 continue
 
         article = Article(feed_fetch=fetch, entry_id=entry.id)
 
-        for field in ["title","summary","author","link","updated","updated_parsed","published","published_parsed"]:
+        for field in [
+            "title",
+            "summary",
+            "author",
+            "link",
+            "updated",
+            "updated_parsed",
+            "published",
+            "published_parsed",
+        ]:
             setattr(article, field, getattr(entry, field, None))
 
         try:
-            article.tags = json.dumps([t['term'] for t in entry.tags[:16]])
+            article.tags = json.dumps([t["term"] for t in entry.tags[:16]])
         except:
             pass
 

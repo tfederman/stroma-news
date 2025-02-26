@@ -9,11 +9,12 @@ from settings import log
 from utils.strutil import is_likely_binary
 from utils.http import get_http_headers, ACCEPT_TYPE_DEFAULT, ACCEPT_TYPE_IMAGES
 
-THUMB_SIZES = ((768, 768),(576, 576),(384, 384),(256, 256))
+THUMB_SIZES = ((768, 768), (576, 576), (384, 384), (256, 256))
 
 
 # "This file is too large. It is 980.06KB but the maximum size is 976.56KB"
 MAX_ALLOWED_IMAGE_SIZE = math.floor(976.56 * 1024)
+
 
 def resize_image(image_bytes):
 
@@ -30,7 +31,9 @@ def resize_image(image_bytes):
         if len(image_bytes_out) < MAX_ALLOWED_IMAGE_SIZE:
             return image_bytes_out
 
-    raise Exception(f"failed to resize image to an appropriate size ({original_length} -> {final_length})")
+    raise Exception(
+        f"failed to resize image to an appropriate size ({original_length} -> {final_length})"
+    )
 
 
 def ensure_resized_image(image_bytes):

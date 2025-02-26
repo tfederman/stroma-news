@@ -15,12 +15,18 @@ class ActionFailed(Exception):
 def get_feed_by_uri(uri, create=True):
 
     feeds = Feed.select().where(
-        (Feed.uri==f"{uri}") | (Feed.uri==f"{uri}/") |
-        (Feed.uri==f"https://{uri}") | (Feed.uri==f"http://{uri}") |
-        (Feed.uri==f"https://{uri}/") | (Feed.uri==f"http://{uri}/") |
-        (Feed.site_href==f"{uri}") | (Feed.site_href==f"{uri}/") |
-        (Feed.site_href==f"https://{uri}") | (Feed.site_href==f"http://{uri}") |
-        (Feed.site_href==f"https://{uri}/") | (Feed.site_href==f"http://{uri}/")
+        (Feed.uri == f"{uri}")
+        | (Feed.uri == f"{uri}/")
+        | (Feed.uri == f"https://{uri}")
+        | (Feed.uri == f"http://{uri}")
+        | (Feed.uri == f"https://{uri}/")
+        | (Feed.uri == f"http://{uri}/")
+        | (Feed.site_href == f"{uri}")
+        | (Feed.site_href == f"{uri}/")
+        | (Feed.site_href == f"https://{uri}")
+        | (Feed.site_href == f"http://{uri}")
+        | (Feed.site_href == f"https://{uri}/")
+        | (Feed.site_href == f"http://{uri}/")
     )
 
     try:
@@ -51,7 +57,7 @@ def subscribe(uri, cm):
     if feed_created:
         log.info(f"queue fetch and save tasks (for {cm.sender.handle})")
         job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=14400)
-        job_save  = q.enqueue(save_articles_task, cm.sender, depends_on=job_fetch, result_ttl=14400)
+        job_save = q.enqueue(save_articles_task, cm.sender, depends_on=job_fetch, result_ttl=14400)
     else:
         log.info(f"queue build and upload feed jobs (for {cm.sender.handle})")
         build_user_feed_job = q.enqueue(build_user_feed, cm.sender)
@@ -74,19 +80,25 @@ def unsubscribe(uri, cm):
 
 
 def remove_quotes(text):
-    if text[0] in ["'",'"']:
+    if text[0] in ["'", '"']:
         text = text[1:]
-    if text[-1] in ["'",'"']:
+    if text[-1] in ["'", '"']:
         text = text[:-1]
     return text
+
 
 def add_filter(text, cm):
     text = remove_quotes(text)
     UserTextFilter.create(user=cm.sender, text=text)
     log.info(f"filter added for user {cm.sender.handle} ({text})")
 
+
 def remove_filter(text, cm):
     text = remove_quotes(text)
-    rows_deleted = UserTextFilter.delete().where(UserTextFilter.user==cm.sender, UserTextFilter.text==text).execute()
+    rows_deleted = (
+        UserTextFilter.delete()
+        .where(UserTextFilter.user == cm.sender, UserTextFilter.text == text)
+        .execute()
+    )
     logfunc = log.info if rows_deleted == 1 else log.warning
     logfunc(f"{rows_deleted} filter rows deleted for user {cm.sender.handle} ({text})")

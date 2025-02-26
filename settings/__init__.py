@@ -9,7 +9,9 @@ bsky = BskyClient()
 
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
 handler.setFormatter(formatter)
 
 log = logging.getLogger()
@@ -21,7 +23,9 @@ try:
     AUTH_USERNAME = os.environ["BSKY_AUTH_USERNAME"]
     AUTH_PASSWORD = os.environ["BSKY_AUTH_PASSWORD"]
 except KeyError:
-    log.critical("bsky credentials must be set in BSKY_AUTH_USERNAME and BSKY_AUTH_PASSWORD environment variables")
+    log.critical(
+        "bsky credentials must be set in BSKY_AUTH_USERNAME and BSKY_AUTH_PASSWORD environment variables"
+    )
     raise
 
 try:
@@ -33,7 +37,7 @@ except KeyError:
     raise
 
 QUEUE_NAME_FETCH = "fetch"
-QUEUE_NAME_POST  = "post"
-QUEUE_NAME_MAIL  = "mailbox"
+QUEUE_NAME_POST = "post"
+QUEUE_NAME_MAIL = "mailbox"
 
 TIMEZONE = ZoneInfo("America/New_York")

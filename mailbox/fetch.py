@@ -35,7 +35,9 @@ def get_and_save_messages():
                 profile = bsky.get_user_profile(convo_log.message.sender.did)
             except Exception as e:
                 if "AccountTakedown" in str(e):
-                    log.info(f"Sender account {convo_log.message.sender.did} no longer exists: AccountTakedown")
+                    log.info(
+                        f"Sender account {convo_log.message.sender.did} no longer exists: AccountTakedown"
+                    )
                     continue
                 else:
                     raise
@@ -43,12 +45,23 @@ def get_and_save_messages():
             # if the cursor decorator on get_convo_logs is working correctly, each message
             # should only be returned by the API once which will avoid integrity errors
             facet_link = get_facet_link(convo_log.message)
-            cm = ConvoMessage.create(message_id=convo_log.message.id, convo_id=convo_log.convoId,
-                    sender_did=convo_log.message.sender.did, sender=profile, text=convo_log.message.text,
-                    sent_at=convo_log.message.sentAt, received_at=received_at, facet_link=facet_link)
+            cm = ConvoMessage.create(
+                message_id=convo_log.message.id,
+                convo_id=convo_log.convoId,
+                sender_did=convo_log.message.sender.did,
+                sender=profile,
+                text=convo_log.message.text,
+                sent_at=convo_log.message.sentAt,
+                received_at=received_at,
+                facet_link=facet_link,
+            )
             messages.append(cm)
 
-    messages += list(ConvoMessage.select().where(ConvoMessage.processed_at.is_null(), ConvoMessage.process_error.is_null()))
+    messages += list(
+        ConvoMessage.select().where(
+            ConvoMessage.processed_at.is_null(), ConvoMessage.process_error.is_null()
+        )
+    )
 
     for cm in messages:
         q = Queue(QUEUE_NAME_MAIL, connection=Redis())
