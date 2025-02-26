@@ -115,6 +115,12 @@ def fetch_feed_task(feed_id):
             feed.state_change_reason = "undesirable feed: comments"
             feed.active = False
 
+        filter_str = (feed.title or "") + (feed.subtitle or "")
+        tokens = ["18+","nsfw","xxx","porn","hentai","erotic","sexy"]
+        if any(t in filter_str.lower() for t in tokens):
+            feed.state_change_reason = "undesirable feed: inappropriate"
+            feed.active = False
+
         feed.save()
 
     for field in ["etag","modified","modified_parsed","href","updated","updated_parsed","version","status"]:
