@@ -161,7 +161,7 @@ def fetch_feed_task(feed_id):
         return status >= 400 or any(s in exception_text for s in server_error_strings)
 
     if len(recent_fetches) >= FEED_ERROR_THRESHOLD and all(error_fetch(f) for f in recent_fetches):
-        log.warning(f"setting feed {feed.id} inactive because last {len(recent_fetches)} fetches resulted in an http error status code")
+        log.warning(f"setting feed {feed.id} inactive because last {len(recent_fetches)} fetches resulted in an http error status code ({fetch.status or 0})")
         feed.active = False
         feed.state_change_reason = "too many recent http errors"
         feed.save()
@@ -294,6 +294,8 @@ def save_articles(fetch, fp):
         article.save()
         saved_articles.append(article)
 
+    published_timestamps = [e.published_parsed for e in fp.entries if isinstance(e.published_parsed, datetime)]
+    fetch.max_published_parsed = max(published_timestamps) if published_timestamps else None
     fetch.articles_saved = len(saved_articles)
     fetch.save()
     return saved_articles
