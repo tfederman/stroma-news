@@ -14,7 +14,7 @@ formatter = logging.Formatter(
 )
 handler.setFormatter(formatter)
 
-log = logging.getLogger()
+log = logging.getLogger("stroma")
 log.setLevel(os.environ.get("LOGLEVEL", "INFO").upper())
 log.addHandler(handler)
 
