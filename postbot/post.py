@@ -1,6 +1,6 @@
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 import redis
 
@@ -32,6 +32,23 @@ def post_article(article_id):
             return
     except:
         pass
+
+    posts_from_feed_24hour = (
+        Article.select()
+        .join(FeedFetch)
+        .join(Feed)
+        .switch(Article)
+        .join(ArticlePost)
+        .where(Article.feed_fetch.feed==article.feed_fetch.feed,
+               ArticlePost.post_id.is_null(False),
+               ArticlePost.posted_at >= datetime.now(UTC) - timedelta(hours=24))
+        .count()
+    )
+
+    if posts_from_feed_24hour >= 40:
+        log.warning(
+            f"not posting article {article.id} because of too many posts from this feed in the last 24 hours ({posts_from_feed_24hour})"
+        )
 
     struggling = server_is_struggling()
     if struggling:
