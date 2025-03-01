@@ -59,7 +59,7 @@ def get_and_save_messages():
 
     messages += list(
         ConvoMessage.select().where(
-            ConvoMessage.processed_at.is_null(), ConvoMessage.process_error.is_null()
+            ConvoMessage.processed_at.is_null(), ConvoMessage.process_error.is_null(), ConvoMessage.id.not_in([cm.id for cm in messages])
         )
     )
 
