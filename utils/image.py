@@ -79,3 +79,7 @@ def get_mimetype(url):
         mimetype = "image/gif"
 
     return mimetype
+
+
+def is_image_content_type(s):
+    return s and s.startswith("image/")
