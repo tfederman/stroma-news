@@ -33,6 +33,13 @@ def post_article(article_id):
     except:
         pass
 
+    try:
+        if "bad content type for article" in article.articlemeta_set[0].exception:
+            log.warning(f"not posting article {article_id} because of content type exception")
+            return
+    except:
+        pass
+
     posts_from_feed_24hour = (
         Article.select()
         .join(FeedFetch)
@@ -46,9 +53,7 @@ def post_article(article_id):
     )
 
     if posts_from_feed_24hour >= 40:
-        log.warning(
-            f"not posting article {article.id} because of too many posts from this feed in the last 24 hours ({posts_from_feed_24hour})"
-        )
+        return
 
     struggling = server_is_struggling()
     if struggling:
