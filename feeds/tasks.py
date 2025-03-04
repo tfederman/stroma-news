@@ -1,5 +1,6 @@
 import hashlib
 import json
+from urllib.parse import urlparse
 from time import struct_time, mktime, time
 from datetime import datetime, timedelta, UTC
 
@@ -31,6 +32,13 @@ def fetch_feed_task(feed_id):
     except Feed.DoesNotExist:
         log.info(f"active feed {feed_id} not found")
         return None, None
+
+    if not feed.tld or not feed.domain or not feed.subdomain:
+        p = urlparse(feed.uri)
+        feed.subdomain = p.netloc.split(":")[0].lower()
+        feed.tld = feed.subdomain.split(".")[-1]
+        feed.domain = '.'.join(feed.subdomain.split(".")[-2:])
+        feed.save()
 
     deactivate_feed_tokens = [
         ":RecentChanges",
