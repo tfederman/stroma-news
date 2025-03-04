@@ -82,6 +82,11 @@ def post_article(article_id):
         if any(t.lower() in filter_check_str.lower() for t in terms):
             return
 
+        authors = [line.strip("\r\n").lower() for line in open("ignore-authors.txt") if line.strip("\r\n")]
+        if article.author and article.author.lower() in authors:
+            log.info(f"skipping article {article.id} because of author {article.author}")
+            return
+
         response = bsky.create_post(post)
         uri = response.uri
         post_id = response.uri.split("/")[-1]
