@@ -23,6 +23,9 @@ class Feed(BaseModel):
     image_url = CharField(null=True)
     active = BooleanField(default=True)
     state_change_reason = CharField(null=True)
+    tld = CharField(null=True)
+    domain = CharField(null=True)
+    subdomain = CharField(null=True)
 
 
 class FeedFetch(BaseModel):
