@@ -3,6 +3,7 @@ import json
 from time import struct_time, mktime, time
 from datetime import datetime, timedelta, UTC
 
+import peewee
 from redis import Redis
 from rq import Queue, get_current_job
 import feedparser
@@ -287,12 +288,15 @@ def save_articles(fetch, fp):
             log.info(f"article with entry {article.entry_id} has no link")
             article.link = "(none)"
 
-        # note - race condition possible if articles were inserted after the
-        # Article.select().where(Article.entry_id==entry.id) check above,
-        # if the same feed under 2 different uris are being fetched at once
-        # from two different workers.
-        article.save()
-        saved_articles.append(article)
+        # note - ignore this race condition that's possible if the same article
+        # was inserted after the Article.select().where(Article.entry_id==entry.id)
+        # check above, which can happen if the same feed under 2 different uris
+        # is being fetched at once from two different workers.
+        try:
+            article.save()
+            saved_articles.append(article)
+        except peewee.IntegrityError:
+            pass
 
     published_timestamps = [e.published_parsed for e in fp.entries if isinstance(e.published_parsed, datetime)]
     fetch.max_published_parsed = max(published_timestamps) if published_timestamps else None
