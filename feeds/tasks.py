@@ -136,12 +136,12 @@ def fetch_feed_task(feed_id):
         log.warning(f"Couldn't update site_href: {e.__class__.__name__} - {e}")
 
     if feed.is_dirty():
-        comments_feed_title_tokens = ["comments on:","comentarios en:","commentaires sur","reacties op:"]
+        comments_feed_title_tokens = ["comments on:","comentarios en:","commentaires sur","reacties op:","komente te:","kommentare zu:","comentários sobre:","kommentarer til:","kommentarer på:"]
         if feed.title and any(feed.title.lower().startswith(t) for t in comments_feed_title_tokens):
             feed.state_change_reason = "undesirable feed: comments"
             feed.active = False
 
-        filter_str = (feed.title or "") + (feed.subtitle or "")
+        filter_str = (feed.title or "") + (feed.subtitle or "") + (feed.uri or "")
         tokens = ["18+","nsfw","xxx","porn","hentai","erotic","sexy"]
         if any(t in filter_str.lower() for t in tokens):
             feed.state_change_reason = "undesirable feed: inappropriate"
