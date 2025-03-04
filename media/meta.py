@@ -5,9 +5,9 @@ from bs4 import BeautifulSoup
 
 from settings import log
 from database.models import Article, ArticleMeta
-from utils.strutil import html_to_text
+from utils.strutil import html_to_text, is_likely_binary
 from utils.http import get_http_headers
-
+from utils.image import is_image_content_type
 
 def get_article_meta(article_id):
 
@@ -19,6 +19,9 @@ def get_article_meta(article_id):
         article_meta.status = r.status_code
         assert r.status_code == 200, f"r.status_code in get_article_meta: {r.status_code}"
         article_meta.content_language = r.headers.get("Content-Language")
+        content_type = r.headers.get("Content-Type")
+        if is_image_content_type(content_type):
+            raise Exception(f"bad content type for article in get_article_meta: {content_type}")
         bs = BeautifulSoup(r.text, 'html.parser')
 
         tags = {
@@ -37,7 +40,7 @@ def get_article_meta(article_id):
                 val = v(bs)
                 if "description" in k:
                     val = html_to_text(val)
-                setattr(article_meta, k, val.strip())
+                setattr(article_meta, k, val.strip().replace("\x00", ""))
             except Exception as e:
                 pass
 
@@ -55,7 +58,8 @@ def get_article_meta(article_id):
     except Exception as e:
         article_meta.exception = str(e)
         try:
-            article_meta.text = r.text[:1024]
+            if not is_likely_binary(r.text) and not "bad content type" in article_meta.exception:
+                article_meta.text = r.text[:2048]
         except:
             pass
 
