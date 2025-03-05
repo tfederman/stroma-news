@@ -1,4 +1,5 @@
 import urllib
+from urllib.parse import urlparse
 
 import requests
 
@@ -9,7 +10,6 @@ from utils.http import get_http_headers, ACCEPT_TYPE_DEFAULT, ACCEPT_TYPE_IMAGES
 
 def get_http_image(url, accept_type=ACCEPT_TYPE_DEFAULT):
 
-    mimetype = get_mimetype(url)
     r = requests.get(url, headers=get_http_headers(accept_type))
 
     if url.startswith("https://cardyb.bsky.app/v1/image?url=") and r.status_code == 400:
@@ -19,6 +19,11 @@ def get_http_image(url, accept_type=ACCEPT_TYPE_DEFAULT):
         return get_http_image(target_url)
 
     r.raise_for_status()
+
+    mimetype = r.headers.get('Content-Type')
+    if not mimetype:
+        mimetype = get_mimetype(url)
+        log.warning(f"missing Content-Type header, falling back to {mimetype} ({url})")
 
     if accept_type == ACCEPT_TYPE_DEFAULT and not is_likely_binary(r.content):
         return get_http_image(url, accept_type=ACCEPT_TYPE_IMAGES)
@@ -30,17 +35,15 @@ def get_http_image(url, accept_type=ACCEPT_TYPE_DEFAULT):
 
 def get_mimetype(url):
 
-    suffix = url.split(".")[-1].lower().split("?")[0]
+    p = urlparse(url)
+    extension = p.path.split(".")[-1].lower()
     mimetype = "application/octet-stream"
 
-    if suffix in ["png"]:
-        mimetype = "image/png"
-    elif suffix in ["jpeg", "jpg"]:
-        mimetype = "image/jpeg"
-    elif suffix in ["webp"]:
-        mimetype = "image/webp"
-    elif suffix in ["gif"]:
-        mimetype = "image/gif"
+    if extension == "jpg":
+        extension = "jpeg"
+
+    if extension in "png,jpeg,webp,avif,gif".split(","):
+        mimetype = f"image/{extension}"
 
     return mimetype
 
