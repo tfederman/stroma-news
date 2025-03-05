@@ -17,7 +17,10 @@ def create_post_retry(article, article_post=None, td=None):
     ArticlePostRetry.create(article=article, article_post=article_post, retry_at=retry_at)
 
 
-def post_article(article_id):
+def post_article(article_id, is_retry=False):
+
+    if is_retry:
+        log.info(f"retrying article {article_id}")
 
     article = (
         Article.select(Article, FeedFetch, Feed)
@@ -118,7 +121,21 @@ def post_article(article_id):
 
     if exception and ("status code 500" in exception or "status code 502" in exception):
         log_server_error()
-        create_post_retry(article, article_post)
+
+        if is_retry:
+            log.error(f"pause and retry after 502 error failed again for article {article_id}")
+
+        if "status code 502" in exception and not is_retry:
+            log.info(f"pausing ten seconds and retrying post_article({article_id})")
+            time.sleep(10)
+            post_article(article_id, is_retry=True)
+        else:
+            create_post_retry(article, article_post)
+
+    if is_retry and article_post.exception is None:
+        log.info(f"pause and retry was successful for article {article_id}")
+    elif is_retry:
+        log.info(f"pause and retry was NOT successful for article {article_id} - {article_post.exception}")
 
     # sleep longer if a call was made to an external service (avoids http 429s)
     if remote_metadata_lookup:
