@@ -6,7 +6,7 @@ import requests
 from settings import log
 from utils.strutil import html_to_text
 from database.models import ArticleMetaCardy
-from utils.image import get_http_image, ensure_resized_image
+from utils.image import get_http_image
 
 
 def get_post(bsky, article):
@@ -113,19 +113,18 @@ def get_link_card_embed(bsky, article):
         "description": description or "",
     }
 
-    image_bytes = None
+    image_data = None
     if img_url:
         try:
-            image_bytes, mimetype = get_http_image(img_url)
-            image_bytes = ensure_resized_image(image_bytes)
+            image_data, mimetype = get_http_image(img_url)
         except Exception as e:
             log.warning(
                 f"can't fetch image, posting anyway ({article.id}): {e.__class__.__name__} - {e}"
             )
 
-    if image_bytes:
+    if image_data:
         try:
-            upload_response = bsky.upload_blob(image_bytes, mimetype)
+            upload_response = bsky.upload_image(image_data=image_data, mimetype=mimetype)
             card["thumb"] = {
                 "$type": "blob",
                 "ref": {"$link": getattr(upload_response.blob.ref, "$link")},
