@@ -82,6 +82,7 @@ class ArticleMeta(BaseModel):
     html_attr_lang = CharField(null=True)
     og_locale = CharField(null=True)
     content_language = CharField(null=True)
+    canonical_link = CharField(null=True)
 
     class Meta:
         table_name = "article_meta"
