@@ -111,7 +111,7 @@ def post_article(article_id, is_retry=False):
             log.info(f"skipping article {article.id} because of author {article.author}")
             return
 
-        response = bsky.create_post(post)
+        response = bsky.create_post(post=post, client_unique_key=f"stroma-article-{article_id}")
         uri = response.uri
         post_id = response.uri.split("/")[-1]
         exception = None
