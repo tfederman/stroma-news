@@ -33,6 +33,7 @@ def get_article_meta(article_id):
             "twitter_image":       lambda bs: bs.find_all("meta", attrs={"name":"twitter:image"})[0].attrs["content"],
             "twitter_description": lambda bs: bs.find_all("meta", attrs={"name":"twitter:description"})[0].attrs["content"],
             "html_attr_lang":      lambda bs: bs.find("html").attrs.get("lang"),
+            "canonical_link":      lambda bs: bs.find_all("link", rel="canonical")[0].attrs["href"],
         }
 
         for k,v in tags.items():
