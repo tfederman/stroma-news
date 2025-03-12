@@ -20,9 +20,6 @@ def create_post_retry(article, article_post=None, td=None):
 
 def post_article(article_id, is_retry=False):
 
-    if is_retry:
-        log.info(f"retrying article {article_id}")
-
     article = (
         Article.select(Article, FeedFetch, Feed)
         .join(FeedFetch)
@@ -123,7 +120,6 @@ def post_article(article_id, is_retry=False):
         uri = None
         post_id = None
         remote_metadata_lookup = "cardy_lookup: True" in str(e)
-        log.error(f"error making post: {e.__class__.__name__} - {e}")
 
     if article.articlepost_set:
         article_post = article.articlepost_set[0]
