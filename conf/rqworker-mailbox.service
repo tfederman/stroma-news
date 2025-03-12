@@ -11,7 +11,6 @@ Environment=LC_LANG=en_US.UTF-8
 ExecStart=/opt/py/bin/rq worker mailbox --quiet
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s INT $MAINPID
-PrivateTmp=true
 Restart=always
 StandardOutput=append:/home/todd/stroma-news/logs/mailbox.out
 StandardError=append:/home/todd/stroma-news/logs/mailbox.err
