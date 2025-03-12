@@ -1,5 +1,6 @@
 import time
 import traceback
+from urllib.parse import urlparse
 from datetime import datetime, timedelta, UTC
 
 import redis
@@ -34,6 +35,29 @@ def post_article(article_id, is_retry=False):
         if html_attr_lang and not html_attr_lang.startswith("en"):
             return
     except:
+        pass
+
+    try:
+        ignore_domains = [line for line in open("ignore-domains.txt") if line.strip()]
+        if article.articlemeta_set:
+            canonical_link = article.articlemeta_set[0].canonical_link
+            if canonical_link:
+                p = urlparse(canonical_link)
+                p2 = urlparse(article.link)
+                if p.netloc != p2.netloc:
+                    log.info(f"canonical_link from {p.netloc} to {p2.netloc}")
+
+                inactive_subdomain = list(Feed.select(Feed.active).where(Feed.subdomain==p.netloc).distinct().tuples()) == [(False,)]
+                if inactive_subdomain:
+                    log.warning(f"skipping article {article.id} because of canonical_link domain (inactive_subdomain) {p.netloc}")
+                    return
+
+                if any(d in p.netloc for d in ignore_domains):
+                    log.warning(f"skipping article {article.id} because of canonical_link domain (ignore_domains) {p.netloc}")
+                    return
+
+    except Exception as e:
+        log.warning(f"exception with canonical link check: {e}")
         pass
 
     try:
