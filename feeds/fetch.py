@@ -43,7 +43,7 @@ def get_feeds_to_fetch():
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
-        elif last_fetched > timedelta(hours=48) and last_article < timedelta(days=7):
+        elif last_fetched > timedelta(hours=48) and last_article < timedelta(days=8):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
@@ -79,7 +79,7 @@ def enqueue_fetch_tasks():
     feeds_to_fetch = feeds_to_fetch[:125]
 
     for n, feed in enumerate(feeds_to_fetch):
-        job_fetch = q.enqueue(fetch_feed_task, feed.id, result_ttl=14400)
-        job_save = q.enqueue(save_articles_task, depends_on=job_fetch, result_ttl=14400)
+        job_fetch = q.enqueue(fetch_feed_task, feed.id, ttl=3600, result_ttl=3600)
+        job_save = q.enqueue(save_articles_task, depends_on=job_fetch, ttl=3600, result_ttl=3600)
 
     log.info(f"{len(feeds_to_fetch)} feeds queued out of {total_count} total feeds")

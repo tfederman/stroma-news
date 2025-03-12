@@ -65,6 +65,6 @@ def get_and_save_messages():
 
     for cm in messages:
         q = Queue(QUEUE_NAME_MAIL, connection=Redis())
-        q.enqueue(process_message, cm, result_ttl=14400)
+        q.enqueue(process_message, cm, ttl=3600, result_ttl=3600)
 
     return len(messages)

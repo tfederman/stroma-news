@@ -216,9 +216,9 @@ def save_articles_task(rebuild_for_user=None):
         ):
             continue
 
-        get_article_meta_job = queue_fetch.enqueue(get_article_meta, article.id, result_ttl=14400)
+        get_article_meta_job = queue_fetch.enqueue(get_article_meta, article.id, ttl=3600, result_ttl=3600)
         post_article_job = queue_post.enqueue(
-            post_article, article.id, depends_on=get_article_meta_job, result_ttl=14400
+            post_article, article.id, depends_on=get_article_meta_job, ttl=3600, result_ttl=3600
         )
         post_article_jobs.append(post_article_job)
 
