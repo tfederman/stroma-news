@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 
 import requests
 
+from pysky.posts import External, Post, Image
+
 from settings import log
 from utils.strutil import html_to_text
 from database.models import ArticleMetaCardy
@@ -14,7 +16,7 @@ def get_post(bsky, article):
     # to do - should html_to_text happen earlier, before article is saved to db?
 
     article.title = html.unescape(html_to_text(article.title) or "")
-    embed, cardy_lookup = get_link_card_embed(bsky, article)
+    external, cardy_lookup = get_link_card_embed(bsky, article)
 
     text = []
 
@@ -48,12 +50,8 @@ def get_post(bsky, article):
     while len("\n".join(text)) > 300:
         text.pop()
 
-    post = {
-        "$type": "app.bsky.feed.post",
-        "text": "\n".join(text),
-        "createdAt": datetime.now(timezone.utc).isoformat(),
-        "embed": embed,
-    }
+    post = Post(text="\n".join(text), client_unique_key=f"stroma-article-{article.id}")
+    post.add_external(external)
 
     return post, cardy_lookup
 
@@ -124,7 +122,8 @@ def get_link_card_embed(bsky, article):
 
     if image_data:
         try:
-            upload_response = bsky.upload_image(image_data=image_data, mimetype=mimetype)
+            image = Image(data=image_data, mimetype=mimetype)
+            upload_response = image.upload(bsky)
             card["thumb"] = {
                 "$type": "blob",
                 "ref": {"$link": getattr(upload_response.blob.ref, "$link")},
@@ -137,7 +136,9 @@ def get_link_card_embed(bsky, article):
             )
             raise
 
-    return {
+    external = External({
         "$type": "app.bsky.embed.external",
         "external": card,
-    }, cardy_lookup
+    })
+
+    return external, cardy_lookup

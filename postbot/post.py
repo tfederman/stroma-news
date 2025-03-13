@@ -100,9 +100,9 @@ def post_article(article_id, is_retry=False):
         post, remote_metadata_lookup = get_post(bsky, article)
 
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
-        external = post["embed"]["external"]
+        card = post.external.external["external"]
         filter_check_str = (
-            (external.get("title") or "") + (external.get("description") or "") + article.link
+            (card.get("title") or "") + (card.get("description") or "") + article.link
         )
         if any(t.lower() in filter_check_str.lower() for t in terms):
             return
@@ -112,7 +112,7 @@ def post_article(article_id, is_retry=False):
             log.info(f"skipping article {article.id} because of author {article.author}")
             return
 
-        response = bsky.create_post(post=post, client_unique_key=f"stroma-article-{article_id}")
+        response = bsky.create_post(post)
         uri = response.uri
         post_id = response.uri.split("/")[-1]
         exception = None
@@ -129,6 +129,7 @@ def post_article(article_id, is_retry=False):
         article_post.article = article
         article_post.exception = exception
         article_post.remote_metadata_lookup = remote_metadata_lookup
+        article_post.posted_at = datetime.now(UTC)
         article_post.save()
     else:
         article_post = ArticlePost(
