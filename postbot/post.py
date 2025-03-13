@@ -44,10 +44,11 @@ def post_article(article_id, is_retry=False):
                 if p.netloc != p2.netloc:
                     log.info(f"canonical_link from {p.netloc} to {p2.netloc}")
 
-                inactive_subdomain = list(Feed.select(Feed.active).where(Feed.subdomain==p.netloc).distinct().tuples()) == [(False,)]
-                if inactive_subdomain:
-                    log.warning(f"skipping article {article.id} because of canonical_link domain (inactive_subdomain) {p.netloc}")
-                    return
+                # not the most desired behavior, www.ign.com is considered inactive but there's an active feed on the equivalent feeds.ign.com
+                # inactive_subdomain = list(Feed.select(Feed.active).where(Feed.subdomain==p.netloc).distinct().tuples()) == [(False,)]
+                #if inactive_subdomain:
+                #    log.warning(f"skipping article {article.id} because of canonical_link domain (inactive_subdomain) {p.netloc}")
+                #    return
 
                 if any(d in p.netloc for d in ignore_domains):
                     log.warning(f"skipping article {article.id} because of canonical_link domain (ignore_domains) {p.netloc}")
