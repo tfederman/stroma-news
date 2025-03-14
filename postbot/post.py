@@ -153,6 +153,7 @@ def post_article(article_id, is_retry=False):
             log.info(f"pausing ten seconds and retrying post_article({article_id})")
             time.sleep(10)
             post_article(article_id, is_retry=True)
+            exception_to_raise = None
         else:
             create_post_retry(article, article_post)
 
