@@ -112,15 +112,17 @@ def post_article(article_id, is_retry=False):
             log.info(f"skipping article {article.id} because of author {article.author}")
             return
 
-        response = bsky.create_post(post)
+        response = bsky.create_post(post=post)
         uri = response.uri
         post_id = response.uri.split("/")[-1]
         exception = None
+        exception_to_raise = None
     except Exception as e:
         exception = f"{e.__class__.__name__} - {e}\n{traceback.format_exc()}"
         uri = None
         post_id = None
         remote_metadata_lookup = "cardy_lookup: True" in str(e)
+        exception_to_raise = e
 
     if article.articlepost_set:
         article_post = article.articlepost_set[0]
@@ -164,5 +166,8 @@ def post_article(article_id, is_retry=False):
         time.sleep(3)
     else:
         time.sleep(1)
+
+    if isinstance(exception_to_raise, Exception):
+        raise exception_to_raise
 
     return article_post.id
