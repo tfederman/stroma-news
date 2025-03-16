@@ -100,10 +100,9 @@ def post_article(article_id, is_retry=False):
         post, remote_metadata_lookup = get_post(bsky, article)
 
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
-        card = post.external.external["external"]
-        filter_check_str = (
-            (card.get("title") or "") + (card.get("description") or "") + article.link
-        )
+        title = post.external.title or ""
+        description = post.external.description or ""
+        filter_check_str = f"{title}:{description}:{article.link}"
         if any(t.lower() in filter_check_str.lower() for t in terms):
             return
 

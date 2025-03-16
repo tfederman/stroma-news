@@ -1,5 +1,4 @@
 import html
-from datetime import datetime, timezone
 
 import requests
 
@@ -50,7 +49,7 @@ def get_post(bsky, article):
     while len("\n".join(text)) > 300:
         text.pop()
 
-    post = Post(text="\n".join(text), client_unique_key=f"stroma-article-{article.id}")
+    post = Post(text="\n".join(text))
     post.add_external(external)
 
     return post, cardy_lookup
@@ -105,11 +104,9 @@ def get_link_card_embed(bsky, article):
     if not description:
         description = html_to_text(article.summary)
 
-    card = {
-        "uri": article.link.replace(" ", "%20"),
-        "title": article.title or "",
-        "description": description or "",
-    }
+    external = External(uri=article.link.replace(" ", "%20"),
+                        title=article.title or "",
+                        description=description or "")
 
     image_data = None
     if img_url:
@@ -123,22 +120,12 @@ def get_link_card_embed(bsky, article):
     if image_data:
         try:
             image = Image(data=image_data, mimetype=mimetype)
-            upload_response = image.upload(bsky)
-            card["thumb"] = {
-                "$type": "blob",
-                "ref": {"$link": getattr(upload_response.blob.ref, "$link")},
-                "mimeType": upload_response.blob.mimeType,
-                "size": upload_response.blob.size,
-            }
+            external.add_image(image)
+            external.upload(bsky)
         except Exception as e:
             log.error(
                 f"exception while uploading image for article {article.id} ({img_url}): {e.__class__.__name__} - {e}"
             )
             raise
-
-    external = External({
-        "$type": "app.bsky.embed.external",
-        "external": card,
-    })
 
     return external, cardy_lookup
