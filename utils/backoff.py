@@ -36,7 +36,7 @@ def server_is_struggling():
     struggle_begin_timestamp = r.get(SERVER_STRUGGLE_BEGIN_KEY)
     if (
         struggle_begin_timestamp
-        and time.time() - int(struggle_begin_timestamp) < SERVER_STRUGGLE_BACKOFF_DURATION
+        and time.time() - int(float(struggle_begin_timestamp)) < SERVER_STRUGGLE_BACKOFF_DURATION
     ):
         return True
 
