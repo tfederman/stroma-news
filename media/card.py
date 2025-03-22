@@ -1,4 +1,5 @@
 import html
+from mimetypes import guess_type
 
 import requests
 
@@ -112,6 +113,11 @@ def get_link_card_embed(bsky, article):
     if img_url:
         try:
             image_data, mimetype = get_http_image(img_url)
+            if not mimetype.startswith("image/")::
+                guessed_mimetype, _ = guess_type(img_url)
+                if guessed_mimetype:
+                    log.warning(f'updating mime type from reported "{mimetype}" to guessed "{guessed_mimetype}"')
+                    mimetype = guessed_mimetype
         except Exception as e:
             log.warning(
                 f"can't fetch image, posting anyway ({article.id}): {e.__class__.__name__} - {e}"
