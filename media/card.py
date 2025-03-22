@@ -113,7 +113,7 @@ def get_link_card_embed(bsky, article):
     if img_url:
         try:
             image_data, mimetype = get_http_image(img_url)
-            if not mimetype.startswith("image/")::
+            if not mimetype.startswith("image/"):
                 guessed_mimetype, _ = guess_type(img_url)
                 if guessed_mimetype:
                     log.warning(f'updating mime type from reported "{mimetype}" to guessed "{guessed_mimetype}"')
