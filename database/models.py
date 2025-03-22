@@ -7,6 +7,7 @@ from pysky.models import BskyUserProfile
 
 from database import db
 from database.fields import PostgreSQLCharField as CharField
+from settings import log
 
 
 class BaseModel(Model):
@@ -107,6 +108,14 @@ class ArticlePost(BaseModel):
     exception = CharField(null=True)
     uri = CharField(null=True)
     remote_metadata_lookup = BooleanField()
+    deleted = BooleanField()
+
+    def delete(self, bsky):
+        assert self.post_id
+        log.info(f'Deleting article {self.post_id} {self.article.id} "{self.article.title}"')
+        bsky.delete_post(self.post_id)
+        self.deleted = True
+        self.save()
 
     class Meta:
         table_name = "article_post"
