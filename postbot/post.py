@@ -40,9 +40,6 @@ def post_article(article_id, is_retry=False):
             canonical_link = article.articlemeta_set[0].canonical_link
             if canonical_link:
                 p = urlparse(canonical_link)
-                p2 = urlparse(article.link)
-                if p.netloc != p2.netloc:
-                    log.info(f"canonical_link from {p.netloc} to {p2.netloc}")
 
                 # not the most desired behavior, www.ign.com is considered inactive but there's an active feed on the equivalent feeds.ign.com
                 # inactive_subdomain = list(Feed.select(Feed.active).where(Feed.subdomain==p.netloc).distinct().tuples()) == [(False,)]
