@@ -129,9 +129,12 @@ def get_link_card_embed(bsky, article):
             external.add_image(image)
             external.upload(bsky)
         except Exception as e:
-            log.error(
-                f"exception while uploading image for article {article.id} ({img_url}): {e.__class__.__name__} - {e}"
-            )
-            raise
+            if "broken data stream when reading image file" in str(e):
+                external.image = None
+            else:
+                log.error(
+                    f"exception while uploading image for article {article.id} ({img_url}): {e.__class__.__name__} - {e}"
+                )
+                raise
 
     return external, cardy_lookup
