@@ -123,7 +123,7 @@ def get_link_card_embed(bsky, article):
                 f"can't fetch image, posting anyway ({article.id}): {e.__class__.__name__} - {e}"
             )
 
-    if image_data:
+    if image_data and mimetype and mimetype.startswith("image/"):
         try:
             image = Image(data=image_data, mimetype=mimetype)
             external.add_image(image)
