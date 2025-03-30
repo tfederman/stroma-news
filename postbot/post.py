@@ -151,7 +151,7 @@ def post_article(article_id, is_retry=False):
         if is_retry:
             log.error(f"pause and retry after 502 error failed again for article {article_id}")
 
-        if "status code 502" in exception and not is_retry:
+        if ("status code 502" in exception or "status code 504" in exception) and not is_retry:
             log.info(f"pausing ten seconds and retrying post_article({article_id})")
             time.sleep(10)
             post_article(article_id, is_retry=True)
