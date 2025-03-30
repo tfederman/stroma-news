@@ -59,7 +59,7 @@ def get_article_meta(article_id):
     except Exception as e:
         article_meta.exception = str(e)
         try:
-            if not is_likely_binary(r.text) and not "bad content type" in article_meta.exception:
+            if not is_likely_binary(r.content) and not "bad content type" in article_meta.exception:
                 article_meta.text = r.text[:2048]
         except:
             pass
