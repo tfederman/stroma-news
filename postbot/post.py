@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, UTC
 
 import redis
 
+from pysky import UploadException, MediaException
+
 from settings import bsky
 from utils.backoff import log_server_error, server_is_struggling
 from settings import log, TIMEZONE
@@ -108,7 +110,11 @@ def post_article(article_id, is_retry=False):
             log.info(f"skipping article {article.id} because of author {article.author}")
             return
 
-        response = bsky.create_post(post=post)
+        try:
+            response = bsky.create_post(post=post)
+        except (MediaException, UploadException) as e:
+            log.warning(f"uploading article {article.id} without media: {e.__class__.__name__} - {e}")
+            response = bsky.create_post(post=post, skip_uploads=True)
         uri = response.uri
         post_id = response.uri.split("/")[-1]
         exception = None

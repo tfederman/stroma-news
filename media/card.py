@@ -3,7 +3,7 @@ from mimetypes import guess_type
 
 import requests
 
-from pysky.posts import External, Post, Image
+from pysky import MediaException, External, Post, Image
 
 from settings import log
 from utils.strutil import html_to_text
@@ -127,7 +127,12 @@ def get_link_card_embed(bsky, article):
         try:
             image = Image(data=image_data, mimetype=mimetype)
             external.add_image(image)
-            external.upload(bsky)
+            try:
+                external.upload(bsky)
+            except MediaException as e:
+                log.warning(f"uploading article {article.id} without media: {e.__class__.__name__} - {e}")
+                external.image = None
+                external.thumb = None
         except Exception as e:
             if "broken data stream when reading image file" in str(e):
                 external.image = None
