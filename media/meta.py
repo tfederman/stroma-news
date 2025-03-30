@@ -73,6 +73,11 @@ def fix_image_links(article, article_meta, property_name):
     if not img or not img.strip() or img.startswith("http"):
         return
 
+    if img.startswith("data:"):
+        log.warning(f"article {article.id} image looks like base64 encoded data: {img[:48]}")
+        setattr(article_meta, property_name, None)
+        return
+
     try:
         p = urlparse(article.link)
     except:
