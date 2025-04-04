@@ -136,6 +136,8 @@ def get_link_card_embed(bsky, article):
         except Exception as e:
             if "broken data stream when reading image file" in str(e):
                 external.image = None
+            elif "cannot identify image file" in str(e):
+                external.image = None
             else:
                 log.error(
                     f"exception while uploading image for article {article.id} ({img_url}): {e.__class__.__name__} - {e}"
