@@ -50,7 +50,7 @@ def get_post(bsky, article):
     while len("\n".join(text)) > 300:
         text.pop()
 
-    post = Post(text="\n".join(text))
+    post = Post(text="\n".join(text), langs=["en"])
     post.add_external(external)
 
     return post, cardy_lookup
