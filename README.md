@@ -4,6 +4,8 @@ An RSS reader implemented through Bluesky custom feeds. Choose your favorite RSS
 
 Note: the instructions below do NOT yet work and are just an idea of how this will likely work when it's finished.
 
+Also, this will probably get renamed to "LongTail News" to reflect the idea behind what content gets included. Because only about 10,000 articles can be posted per day, I'm excluding many common topics that can be found anywhere and want to focus on using the daily budget to include more obscure sources/topics.
+
 ## How to use:
 
 1. Follow the ["Stroma News" Bluesky custom feed](https://bsky.app/profile/stroma.news/feed/stroma-news). This feed will be empty for you at first.
