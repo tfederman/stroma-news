@@ -128,8 +128,9 @@ def fetch_feed_task(feed_id):
         link_href = None
         for link in getattr(fp.feed, "links", []):
             if link["rel"] == "alternate" and link["type"] == "text/html":
-                link_href = link["href"]
-                break
+                link_href = link.get("href")
+                if link_href:
+                    break
         if link_href and link_href != feed.site_href:
             feed.site_href = link_href
     except Exception as e:
