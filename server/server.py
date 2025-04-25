@@ -24,7 +24,7 @@ def lambda_handler(event, context):
 Notes:
 
 to update function code:
-- cd server && zip bsky-server.zip *.py && aws lambda update-function-code --function-name bsky_server --zip-file fileb://bsky-server.zip
+- cd server && zip bsky-server.zip *.py && aws lambda update-function-code --function-name bsky_02 --zip-file fileb://bsky-server.zip
 
 to update function config:
 - aws lambda update-function-configuration --function-name bsky_server --handler server.lambda_handler

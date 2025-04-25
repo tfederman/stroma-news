@@ -14,16 +14,16 @@ FEEDS = [
 ]
 
 
-def get_s3_feed(did, limit, cursor):
+def get_s3_feed(filename, limit, cursor):
 
     if cursor == EOF_CURSOR:
         return {"cursor": cursor, "feed": []}
 
-    short_did = did.replace("did:plc:", "")
+    filename = filename.replace("did:plc:", "")
 
     bucket = os.environ["S3_BUCKET"]
     prefix = os.environ["S3_PREFIX"]
-    key = f"{prefix}/{short_did}.json"
+    key = f"{prefix}/{filename}.json"
 
     s3 = boto3.client("s3")
     obj = s3.get_object(Bucket=bucket, Key=key)
@@ -61,7 +61,10 @@ def get_s3_feed(did, limit, cursor):
 
 def get_feed_items(feed, did, limit, cursor):
     try:
-        return get_s3_feed(did, limit, cursor)
+        if feed == "longtail-random":
+            return get_s3_feed("random", limit, cursor)
+        else:
+            return get_s3_feed(did, limit, cursor)
     except Exception as e:
         print(f"+++ s3_test_feed_items exception: {e}")
         return placeholder_feed_items()[:limit]
