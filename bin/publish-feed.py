@@ -1,48 +1,38 @@
+#!/usr/bin/env python
+
 import os
+from datetime import datetime, UTC
 
-from atproto import Client, models
+from settings import bsky
 
-HANDLE = os.environ["BSKY_AUTH_USERNAME"]
-PASSWORD = os.environ["BSKY_AUTH_PASSWORD"]
 HOSTNAME = os.environ["CUSTOM_FEED_HOSTNAME"]
-FEED_URI = "at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-news"
-RECORD_NAME = "stroma-news"
-DISPLAY_NAME = "RSS Feeds from Stroma"
-DESCRIPTION = "Links from RSS feeds that you subscribe to. (still in development)"
-AVATAR_PATH = "./assets/atom.png"
-SERVICE_DID = f"did:web:{HOSTNAME}"
+RECORD_NAME = "longtail-random"
+#FEED_URI = f"at://{bsky.did}/app.bsky.feed.generator/{RECORD_NAME}"
+DISPLAY_NAME = "Longtail Roulette"
+DESCRIPTION = "48 random links from the last 48 hours, updated every 10 minutes"
 
 
 def main():
-    client = Client()
-    client.login(HANDLE, PASSWORD)
 
-    feed_did = SERVICE_DID
-    if not feed_did:
-        feed_did = f"did:web:{HOSTNAME}"
+    icon_path = "./assets/die.jpg"
 
-    avatar_blob = None
-    if AVATAR_PATH:
-        with open(AVATAR_PATH, "rb") as f:
-            avatar_data = f.read()
-            avatar_blob = client.upload_blob(avatar_data).blob
+    with open(icon_path, "rb") as f:
+        icon_data = f.read()
+        blob_response = bsky.upload_blob(icon_data, "image/jpeg")
+        print(blob_response)
 
-    response = client.com.atproto.repo.put_record(
-        models.ComAtprotoRepoPutRecord.Data(
-            repo=client.me.did,
-            collection=models.ids.AppBskyFeedGenerator,
-            rkey=RECORD_NAME,
-            record=models.AppBskyFeedGenerator.Record(
-                did=feed_did,
-                display_name=DISPLAY_NAME,
-                description=DESCRIPTION,
-                avatar=avatar_blob,
-                created_at=client.get_current_time_iso(),
-            ),
-        )
-    )
+    collection = "app.bsky.feed.generator"
+    rkey = "longtail-random"
+    record = {
+        "did": f"did:web:{HOSTNAME}",
+        "displayName": DISPLAY_NAME,
+        "description": DESCRIPTION,
+        "avatar": blob_response.json["blob"],
+        "createdAt": datetime.now(UTC).isoformat(),
+    }
 
-    print('Feed URI (put in "FEED_URI" env var):', response.uri)
+    response = bsky.put_record(collection, record, rkey)
+    print(response)
 
 
 if __name__=="__main__":
