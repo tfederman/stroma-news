@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, UTC
 
 import redis
 
-from pysky import UploadException, MediaException
+from pysky import UploadException, MediaException, RateLimitExceeded
 
 from settings import bsky
 from utils.backoff import log_server_error, server_is_struggling
@@ -76,7 +76,7 @@ def post_article(article_id, is_retry=False):
         .count()
     )
 
-    if posts_from_feed_24hour >= 40:
+    if posts_from_feed_24hour >= 20:
         return
 
     struggling = server_is_struggling()
@@ -111,7 +111,18 @@ def post_article(article_id, is_retry=False):
             return
 
         try:
-            response = bsky.create_post(post=post)
+            for n in range(40):
+                try:
+                    response = bsky.create_post(post=post)
+                    if n > 0:
+                        log.warning(f"posted article {article.id} on rate limit attempt {n+1}")
+                    break
+                except RateLimitExceeded:
+                    if n >= 39:
+                        log.error(f"ran out of attempts to post rate-limited article {article.id}")
+                        raise
+                    time.sleep(30)
+
         except (MediaException, UploadException) as e:
             log.warning(f"uploading article {article.id} without media: {e.__class__.__name__} - {e}")
             response = bsky.create_post(post=post, skip_uploads=True)
