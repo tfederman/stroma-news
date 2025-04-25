@@ -47,6 +47,7 @@ class FeedFetch(BaseModel):
     http_content_type = CharField(null=True)
     bozo_exception = CharField(null=True)
     articles_saved = IntegerField()
+    articles_total = IntegerField()
     max_published_parsed = DateTimeField(null=True)
 
     class Meta:

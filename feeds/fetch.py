@@ -22,6 +22,8 @@ def get_feeds_to_fetch():
             fn.max(FeedFetch.timestamp).alias("max_ts"),
             fn.max(Article.published_parsed).alias("max_pp"),
             fn.max(FeedFetch.status).alias("max_status"),
+            fn.count(FeedFetch.id).alias("count_fetches"),
+            fn.sum(FeedFetch.articles_saved).alias("sum_articles_saved"),
         )
         .join(FeedFetch)
         .join(Article, JOIN.LEFT_OUTER)
@@ -44,7 +46,7 @@ def get_feeds_to_fetch():
         last_article = now - f.max_pp
 
         # include this one if very recently published but not fetched very recently
-        if last_fetched > timedelta(hours=8) and last_article < timedelta(days=2):
+        if last_fetched > timedelta(hours=24) and last_article < timedelta(days=2):
             return_feeds.append(f)
 
         # include this one if less recently published but not fetched less recently
@@ -79,7 +81,7 @@ def enqueue_fetch_tasks():
 
     feeds_to_fetch = get_feeds_to_fetch()
     total_count = len(feeds_to_fetch)
-    feeds_to_fetch = feeds_to_fetch[:150]
+    feeds_to_fetch = feeds_to_fetch[:180]
 
     for n, feed in enumerate(feeds_to_fetch):
         job_fetch = q.enqueue(fetch_feed_task, feed.id, ttl=3600, result_ttl=3600)

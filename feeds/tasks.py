@@ -219,7 +219,7 @@ def save_articles_task(rebuild_for_user=None):
 
         get_article_meta_job = queue_fetch.enqueue(get_article_meta, article.id, ttl=3600, result_ttl=3600)
         post_article_job = queue_post.enqueue(
-            post_article, article.id, depends_on=get_article_meta_job, ttl=3600, result_ttl=3600
+            post_article, article.id, depends_on=get_article_meta_job, ttl=3600, result_ttl=3600, job_timeout="21m",
         )
         post_article_jobs.append(post_article_job)
 
@@ -310,5 +310,6 @@ def save_articles(fetch, fp):
     published_timestamps = [e.published_parsed for e in fp.entries if isinstance(e.published_parsed, datetime)]
     fetch.max_published_parsed = max(published_timestamps) if published_timestamps else None
     fetch.articles_saved = len(saved_articles)
+    fetch.articles_total = len(fp.entries)
     fetch.save()
     return saved_articles
