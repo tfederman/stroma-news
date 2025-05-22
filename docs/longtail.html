@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" href="pico.min.css">
+    <title>
+        Longtail News
+    </title>
+  </head>
+  <body>
+    <header class="container">
+    <h1>
+        Longtail News
+    </h1>
+    </header>
+    <main class="container">
+    <p>
+        Longtail News is an experiment to use <a href="https://bsky.social/about/blog/7-27-2023-custom-feeds">Bluesky custom feeds</a> as an RSS reader. The goal of the project is for people to design their own custom (Bluesky) feed with articles from RSS feeds, customized through DMs to <a href="https://bsky.app/profile/longtail.news">@longtail.news</a>. The personalization isn't available yet but I'll update this page when it is.
+    </p>
+    <p>
+        The articles for the custom feed come from a large database of RSS feeds that I pull from and post as links to Bluesky. An account can only make about 12,000 posts per day and I capture many more articles than that, so many of the most common and popular topics are excluded to make room for more obscure and diverse topics and sources, the "long tail" of content. A lot of mainstream political content is excluded, that can be found elsewhere. This project is not meant to be doomscrolled.
+    </p>
+    <h3>
+        Development
+    </h3>
+    <p>
+        As I was working on this I started developing a <a href="https://github.com/tfederman/pysky">Bluesky API library</a> which sidetracked me from finishing the custom feed personalization. When I started making a high volume of API calls there were features and conveniences I wanted for this project and others.
+    </p>
+    <p>
+        I also got sidetracked by the curation aspect of the project. The limited daily budget of posts is what led to the idea of excluding the most common topics so the budget could be used for more interesting content. Porn, content farms, AI content, and intolerance are also excluded. I can't vet everything manually, but send a DM to <a href="https://bsky.app/profile/longtail.news">@longtail.news</a> if you see a source that looks like it should be removed. Or if you have any other questions.
+    </p>
+    <h3>
+        Static Custom Feeds
+    </h3>
+    <p>
+        For now I've created two simple custom feeds: <a href="https://bsky.app/profile/longtail.news/feed/longtail-random">random articles from the last 48 hours</a>, and <a href="https://bsky.app/profile/longtail.news/feed/longtail-random-90">random articles from the last 90 days</a>. Both of these refresh with new articles every 30 minutes.
+    </p>
+    <p>
+        I don't suggest following <a href="https://bsky.app/profile/longtail.news">@longtail.news</a> directly because it posts at such a high volume and the posts are only meant to populate custom feeds. But many people and/or bots do, and it is a good firehose of articles since a lot of work has gone into curating out garbage.
+    </p>
+    <h3>
+        Statistics
+    </h3>
+    <ul>
+        <li>Total posts: 880,000 (starting 2025-01-31, as of 2025-05-22)</li>
+        <li>Average posts per day: 11,160</li>
+        <li>Unique RSS sources posted per day / per week: 3,220 / 6,140</li>
+        <li>Total sources in database: 23,400</li>
+        <li>Fetches from sources per day / per week: 10,080 / 70,570</li>
+        <li>Total API calls made: 2,021,700</li>
+    </ul>
+    <p>
+        The project code lives <a href="https://github.com/tfederman/stroma-news">here</a>.
+    </p>
+    </main>
+  </body>
+</html>
