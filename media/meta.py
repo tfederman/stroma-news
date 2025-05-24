@@ -1,4 +1,4 @@
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -68,7 +68,6 @@ def get_article_meta(article_id):
 
 
 def fix_image_links(article, article_meta, property_name):
-
     img = getattr(article_meta, property_name, None)
     if not img or not img.strip() or img.startswith("http"):
         return
@@ -79,12 +78,20 @@ def fix_image_links(article, article_meta, property_name):
         return
 
     try:
-        p = urlparse(article.link)
-    except:
-        log.warning(f"fix_image_links parse error for {article.link} ({article.id})")
+        p_img = urlparse(img)
+        p_art = urlparse(article.link)
+    except Exception as e:
+        log.warning(f"fix_image_links parse error for {article.link} ({article.id}) ({e}) ({img})")
         return
 
-    prefix = f"{p.scheme}://{p.netloc}"
-    img = img.lstrip("/")
-    log.info(f"changing bad {property_name} link from {img} to {prefix}/{img}")
-    setattr(article_meta, property_name, f"{prefix}/{img}")
+    # use either the scheme from the article url or both the scheme and netloc
+    if not p_img.scheme and not p_img.netloc:
+        p_img = p_img._replace(scheme=p_art.scheme)
+        p_img = p_img._replace(netloc=p_art.netloc)
+    elif not p_img.scheme and "." in p_img.netloc:
+        p_img = p_img._replace(scheme=p_art.scheme)
+    else:
+        return
+
+    log.info(f"changing bad {property_name} link ({article.id}) from {img} to {urlunparse(p_img)}")
+    setattr(article_meta, property_name, urlunparse(p_img))
