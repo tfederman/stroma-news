@@ -111,7 +111,7 @@ def post_article(article_id, is_retry=False):
             return
 
         try:
-            for n in range(40):
+            for n in range(120):
                 try:
                     response = bsky.create_post(post=post)
                     if n > 0:
