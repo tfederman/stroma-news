@@ -11,8 +11,10 @@ FEEDS = [
     {"uri": f"at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-news"},
     {"uri": f"at://did:plc:o6ggjvnj4ze3mnrpnv5oravg/app.bsky.feed.generator/stroma-test"},
     {"uri": f"at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/tmf-test"},
+    {"uri": f"at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/longtail-random"},
+    {"uri": f"at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/longtail-random-90"},
+    {"uri": f"at://did:plc:5euo5vsiaqnxplnyug3k3art/app.bsky.feed.generator/longtail-labeled"},
 ]
-
 
 def get_s3_feed(filename, limit, cursor):
 
@@ -61,8 +63,12 @@ def get_s3_feed(filename, limit, cursor):
 
 def get_feed_items(feed, did, limit, cursor):
     try:
-        if feed == "longtail-random":
-            return get_s3_feed("random", limit, cursor)
+        if "90" in feed:
+            return get_s3_feed("random-feed-90-day", limit, cursor)
+        elif "48" in feed or "random" in feed or "roulette" in feed:
+            return get_s3_feed("random-feed-48-hour", limit, cursor)
+        elif "labeled" in feed:
+            return get_s3_feed("labels-feed", limit, cursor)
         else:
             return get_s3_feed(did, limit, cursor)
     except Exception as e:
