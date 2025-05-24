@@ -2,12 +2,11 @@
 
 import psycopg2
 
-from pysky import BskyClient, APIError
+from settings import bsky
 
 con = psycopg2.connect()
 cursor = con.cursor()
 
-bsky = BskyClient()
 feed = bsky.get_author_feed(actor=bsky.did, cursor=None, page_count=50)
 posts = [p.post for p in feed.feed if p.post.labels]
 

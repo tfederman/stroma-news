@@ -10,22 +10,31 @@ from peewee import fn
 from settings import log, S3_BUCKET, S3_PREFIX, bsky
 from database.models import Article, ArticlePost
 
-expressions = [
-    ArticlePost.post_id.is_null(False),
-    ArticlePost.deleted.is_null(),
-    ArticlePost.posted_at >= datetime.now(UTC) - timedelta(hours=24),
-    ArticlePost.posted_at <= datetime.now(UTC) + timedelta(hours=4),
-]
-
-articles = Article.select().join(ArticlePost).where(*expressions).order_by(fn.Random()).limit(48)
-
 now = int(time.time())
 
-feed = {"feed": [{"cursor": now-n, "post": f"at://{bsky.did}/app.bsky.feed.post/{a.articlepost_set[0].post_id}"} for n,a in enumerate(articles)]}
+feed_expressions = {
+    "48-hour": [
+        ArticlePost.post_id.is_null(False),
+        ArticlePost.deleted.is_null(),
+        ArticlePost.posted_at >= datetime.now(UTC) - timedelta(hours=48),
+        ArticlePost.posted_at <= datetime.now(UTC) + timedelta(hours=4),
+    ],
+    "90-day": [
+        ArticlePost.post_id.is_null(False),
+        ArticlePost.deleted.is_null(),
+        ArticlePost.posted_at >= datetime.now(UTC) - timedelta(days=90),
+        ArticlePost.posted_at <= datetime.now(UTC) - timedelta(days=2),
+    ],
+}
 
-FILENAME = "/tmp/random-feed.json"
+for feedname, expr in feed_expressions.items():
+    articles = Article.select().join(ArticlePost).where(*expr).order_by(fn.Random()).limit(48)
 
-open(FILENAME, "w").write(json.dumps(feed))
+    feed = {"feed": [{"cursor": now-n, "post": f"at://{bsky.did}/app.bsky.feed.post/{a.articlepost_set[0].post_id}"} for n,a in enumerate(articles)]}
 
-cmd = ["aws", "--quiet", "s3", "cp", FILENAME, f"s3://{S3_BUCKET}/{S3_PREFIX}/random.json"]
-subprocess.check_call(cmd)
+    FILENAME = f"/tmp/random-feed-{feedname}.json"
+
+    open(FILENAME, "w").write(json.dumps(feed))
+
+    cmd = ["aws", "--quiet", "s3", "cp", FILENAME, f"s3://{S3_BUCKET}/{S3_PREFIX}/"]
+    subprocess.check_call(cmd)
