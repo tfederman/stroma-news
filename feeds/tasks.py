@@ -142,9 +142,9 @@ def fetch_feed_task(feed_id):
             feed.state_change_reason = "undesirable feed: comments"
             feed.active = False
 
-        filter_str = (feed.title or "") + (feed.subtitle or "") + (feed.uri or "")
-        tokens = ["18+","nsfw","xxx","porn","hentai","erotic","sexy"]
-        if any(t in filter_str.lower() for t in tokens):
+        filter_str = (feed.title or "") + " " + (feed.subtitle or "") + " " + (feed.uri or "")
+        terms = [line.strip("\r\n") for line in open("ignore-feed-terms.txt")]
+        if any(t in filter_str.lower() for t in terms):
             feed.state_change_reason = "undesirable feed: inappropriate"
             feed.active = False
 
