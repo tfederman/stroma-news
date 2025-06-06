@@ -210,6 +210,7 @@ def save_articles_task(rebuild_for_user=None):
 
     for article in articles:
 
+        # to do - should all articles be saved and filtering be done at time of posting instead?
         terms = [line.strip("\r\n") for line in open("ignore-terms.txt")]
         if any(
             t in (article.title or "").lower() + (article.summary or "").lower() + article.link
