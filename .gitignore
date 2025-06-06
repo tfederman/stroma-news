@@ -2,3 +2,8 @@ __pycache__
 stroma.db*
 secrets.py
 bsky.zip
+*.out
+*.err
+*.json
+*.xml
+*.txt
