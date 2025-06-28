@@ -40,7 +40,7 @@ def get_article_meta(article_id):
             try:
                 val = v(bs)
                 if "description" in k:
-                    val = html_to_text(val)
+                    val = html_to_text(val)[:4*1024]
                 setattr(article_meta, k, val.strip().replace("\x00", ""))
             except Exception as e:
                 pass

@@ -105,8 +105,10 @@ def get_link_card_embed(bsky, article):
     if not description:
         description = html_to_text(article.summary)
 
+    article.title = article.title or ""
+    shortened_title = article.title.split("\n")[0]
     external = External(uri=article.link.replace(" ", "%20"),
-                        title=article.title or "",
+                        title=shortened_title,
                         description=description or "")
 
     image_data = None
