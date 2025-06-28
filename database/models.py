@@ -3,6 +3,7 @@ from datetime import datetime
 from peewee import Model, IntegerField, ForeignKeyField, BooleanField, DecimalField
 from playhouse.postgres_ext import DateTimeTZField as DateTimeField
 
+import pysky
 from pysky.models import BskyUserProfile
 
 from database import db
@@ -144,23 +145,41 @@ class ConvoMessage(BaseModel):
     processed_at = DateTimeField(null=True)
     process_error = CharField(null=True)
     facet_link = CharField()
+    message_object = CharField()
+    reply = CharField()
 
     class Meta:
         table_name = "convo_message"
+
+    def send_reply(self, bsky, reply=None):
+
+        reply = reply or self.reply
+        assert reply, f"no reply text for {cm.id}"
+        params = {"convoId": self.convo_id, "message": {"text": reply}}
+        return bsky.post(hostname=pysky.HOSTNAME_CHAT, endpoint="xrpc/chat.bsky.convo.sendMessage", params=params)
 
 
 class UserFeedSubscription(BaseModel):
     user = ForeignKeyField(BskyUserProfile)
     feed = ForeignKeyField(Feed)
-    active = BooleanField(default=True)
 
     class Meta:
         table_name = "user_feed_subscription"
+        indexes = (
+            (("user", "feed"), True),
+        )
 
-
-class UserTextFilter(BaseModel):
+class UserTermSubscription(BaseModel):
     user = ForeignKeyField(BskyUserProfile)
-    text = CharField()
+    term = CharField()
 
     class Meta:
-        table_name = "user_text_filter"
+        table_name = "user_term_subscription"
+
+
+class UserTermFilter(BaseModel):
+    user = ForeignKeyField(BskyUserProfile)
+    term = CharField()
+
+    class Meta:
+        table_name = "user_term_filter"

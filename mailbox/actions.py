@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from redis import Redis
 from rq import Queue
 
@@ -5,100 +7,102 @@ from settings import log, QUEUE_NAME_FETCH
 from feeds.user import build_user_feed
 from feeds.tasks import fetch_feed_task, save_articles_task
 from utils.filesystem import upload_user_feed_to_s3
-from database.models import UserFeedSubscription, Feed, UserTextFilter
+from database.models import UserFeedSubscription, UserTermSubscription, Article, ArticlePost, Feed
 
 
-class ActionFailed(Exception):
+def add_filter_term(cm, message_text):
+    pass
+
+def remove_filter_term(cm, message_text):
     pass
 
 
-def get_feed_by_uri(uri, create=True):
+def add_feed(cm, message_text):
+    url = cm.facet_link or message_text
+    log.info(f"#{cm.id}: add_feed(\"{url}\")")
+    feed = get_feed_from_url(cm, url)
 
-    feeds = Feed.select().where(
-        (Feed.uri == f"{uri}")
-        | (Feed.uri == f"{uri}/")
-        | (Feed.uri == f"https://{uri}")
-        | (Feed.uri == f"http://{uri}")
-        | (Feed.uri == f"https://{uri}/")
-        | (Feed.uri == f"http://{uri}/")
-        | (Feed.site_href == f"{uri}")
-        | (Feed.site_href == f"{uri}/")
-        | (Feed.site_href == f"https://{uri}")
-        | (Feed.site_href == f"http://{uri}")
-        | (Feed.site_href == f"https://{uri}/")
-        | (Feed.site_href == f"http://{uri}/")
-    )
-
-    try:
-        return feeds[0], False
-    except IndexError:
-        if create:
-            return Feed.create(uri=uri), True
-        else:
-            return None, False
-
-
-def subscribe(uri, cm):
-
-    log.info(f"subscribe {cm.sender.handle} to {uri}")
-    uri = cm.facet_link or uri
-    feed, feed_created = get_feed_by_uri(uri)
-    log.info(f"feed: {feed.id} (created: {feed_created})")
+    if feed and not feed.active:
+        log.error(f'#{cm.id}: feed {feed.id} is inactive')
+        cm.process_error = f'#{cm.id}: no active feed found for "{url}"'
+        cm.reply = f"An active RSS feed for that URL was not found, sorry! ({cm.id})"
+        return
 
     if not feed:
-        raise ActionFailed(f"Feed to subscribe to not found for {uri}")
+        cm.process_error = f'#{cm.id}: no feed found for "{url}"'
+        cm.reply = f"An RSS feed for that URL was not found, sorry! ({cm.id})"
+        return
 
-    q = Queue(QUEUE_NAME_FETCH, connection=Redis())
-    sub = UserFeedSubscription.create(user=cm.sender, feed=feed)
-    log.info(f"subscription id {sub.id}")
-
-    # if rss feed is new, then first fetch it and next rebuild/upload requesting user's feed.
-    # if rss feed is existing, only rebuild user's feed.
-    if feed_created:
-        log.info(f"queue fetch and save tasks (for {cm.sender.handle})")
-        job_fetch = q.enqueue(fetch_feed_task, feed.id, ttl=3600, result_ttl=3600)
-        job_save = q.enqueue(save_articles_task, cm.sender, depends_on=job_fetch, ttl=3600, result_ttl=3600)
+    ufs, created = UserFeedSubscription.get_or_create(user=cm.sender, feed=feed)
+    if created:
+        cm.reply = f'The feed "{feed.title}" was added to your list.'
     else:
-        log.info(f"queue build and upload feed jobs (for {cm.sender.handle})")
-        build_user_feed_job = q.enqueue(build_user_feed, cm.sender)
-        upload_job = q.enqueue(upload_user_feed_to_s3, cm.sender, depends_on=build_user_feed_job)
+        cm.reply = f'The feed "{feed.title}" seems to be on your list already.'
 
 
-def unsubscribe(uri, cm):
+def remove_feed(cm, message_text):
 
-    feed, created = get_feed_by_uri(uri, create=False)
+    url = cm.facet_link or message_text
+    log.info(f"#{cm.id}: remove_feed(\"{url}\")")
+    feed = get_feed_from_url(cm, url)
 
-    if feed:
-        sub = UserFeedSubscription.get_or_none(user=cm.sender, feed=feed)
-        if sub:
-            sub.active = False
-            sub.save()
-        else:
-            raise ActionFailed(f"Subscription to remove not found for user {sender.id}, uri {uri}")
+    if not feed:
+        cm.process_error = f'#{cm.id}: no feed found for "{url}"'
+        cm.reply = f"An RSS feed for that URL was not found, sorry! ({cm.id})"
+        return
+
+    delete_stmt = UserFeedSubscription.delete().where(UserFeedSubscription.user==cm.sender, UserFeedSubscription.feed==feed)
+    rows_deleted = delete_stmt.execute()
+
+    if rows_deleted > 0:
+        cm.reply = f'The feed was removed from your list.'
     else:
-        raise ActionFailed(f"Feed to remove not found for user {sender.id}, uri {uri}")
+        cm.reply = f'The feed was not removed because it was not found on your list, sorry! ({cm.id})'
 
 
-def remove_quotes(text):
-    if text[0] in ["'", '"']:
-        text = text[1:]
-    if text[-1] in ["'", '"']:
-        text = text[:-1]
-    return text
+def add_term(cm, message_text):
+
+    uts, created = UserTermSubscription.get_or_create(user=cm.sender, term=message_text)
+    if created:
+        cm.reply = f'The term "{message_text}" was added to your list.'
+    else:
+        cm.reply = f'The term "{message_text}" seems to be on your list already.'
 
 
-def add_filter(text, cm):
-    text = remove_quotes(text)
-    UserTextFilter.create(user=cm.sender, text=text)
-    log.info(f"filter added for user {cm.sender.handle} ({text})")
+def remove_term(cm, message_text):
+
+    delete_stmt = UserTermSubscription.delete().where(UserTermSubscription.user==cm.sender, UserTermSubscription.term==message_text)
+    rows_deleted = delete_stmt.execute()
+
+    if rows_deleted > 0:
+        cm.reply = f'The term was removed from your list.'
+    else:
+        cm.reply = f'The term was not removed from your list. Perhaps you spelled it differently when adding it? ({cm.id})'
 
 
-def remove_filter(text, cm):
-    text = remove_quotes(text)
-    rows_deleted = (
-        UserTextFilter.delete()
-        .where(UserTextFilter.user == cm.sender, UserTextFilter.text == text)
-        .execute()
-    )
-    logfunc = log.info if rows_deleted == 1 else log.warning
-    logfunc(f"{rows_deleted} filter rows deleted for user {cm.sender.handle} ({text})")
+def get_feed_from_url(cm, url):
+    p = urlparse(url)
+
+    # is this a sufficient test for article url vs. bsky url?
+    if p.netloc == "bsky.app":
+        post_id = url.split("/")[-1]
+        post = ArticlePost.get(ArticlePost.post_id==post_id)
+        feed = post.article.feed_fetch.feed
+    else:
+        feed = Article.get_or_none(Article.link==url) or Feed.get_or_none(Feed.uri==url)
+        if isinstance(feed, Article):
+            feed = feed.feed_fetch.feed
+
+        if not feed:
+            # try getting new feed from url
+            feed = get_feed_from_article(cm, url)
+
+    if not feed:
+        log.error(f'#{cm.id}: no feed found for "{url}"')
+        return None
+
+    return feed
+
+
+def get_feed_from_article(cm, url):
+    return None
