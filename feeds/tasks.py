@@ -293,7 +293,7 @@ def save_articles(fetch, fp):
             article.title = article.title[:512]
 
         if article.summary:
-            article.summary = article.summary[:(16*1024)]
+            article.summary = article.summary[:(8*1024)]
 
         try:
             article.tags = json.dumps([t["term"] for t in entry.tags[:16]])
