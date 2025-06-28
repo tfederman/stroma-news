@@ -289,6 +289,12 @@ def save_articles(fetch, fp):
         for field in ["title","summary","author","link","updated","updated_parsed","published","published_parsed"]:
             setattr(article, field, getattr(entry, field, None))
 
+        if article.title:
+            article.title = article.title[:512]
+
+        if article.summary:
+            article.summary = article.summary[:(16*1024)]
+
         try:
             article.tags = json.dumps([t["term"] for t in entry.tags[:16]])
         except:
