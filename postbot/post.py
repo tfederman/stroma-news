@@ -177,9 +177,9 @@ def post_article(article_id, is_retry=False):
 
     # sleep longer if a call was made to an external service (avoids http 429s)
     if remote_metadata_lookup:
-        time.sleep(3)
+        time.sleep(2)
     else:
-        time.sleep(1)
+        time.sleep(0.8)
 
     if isinstance(exception_to_raise, Exception):
         raise exception_to_raise
