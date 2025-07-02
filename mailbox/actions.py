@@ -7,14 +7,27 @@ from settings import log, QUEUE_NAME_FETCH
 from feeds.user import build_user_feed
 from feeds.tasks import fetch_feed_task, save_articles_task
 from utils.filesystem import upload_user_feed_to_s3
-from database.models import UserFeedSubscription, UserTermSubscription, Article, ArticlePost, Feed
+from database.models import UserFeedSubscription, UserTermSubscription, UserTermFilter, Article, ArticlePost, Feed
 
 
 def add_filter_term(cm, message_text):
-    pass
+
+    uts, created = UserTermFilter.get_or_create(user=cm.sender, term=message_text)
+    if created:
+        cm.reply = f'The term "{message_text}" was added to your filter list.'
+    else:
+        cm.reply = f'The term "{message_text}" seems to be on your filter list already.'
+
 
 def remove_filter_term(cm, message_text):
-    pass
+
+    delete_stmt = UserTermFilter.delete().where(UserTermFilter.user==cm.sender, UserTermFilter.term==message_text)
+    rows_deleted = delete_stmt.execute()
+
+    if rows_deleted > 0:
+        cm.reply = f'The term was removed from your filter list.'
+    else:
+        cm.reply = f'The term was not removed from your filter list. Perhaps you spelled it differently when adding it? ({cm.id})'
 
 
 def add_feed(cm, message_text):
