@@ -9,7 +9,7 @@ from redis import Redis
 from rq import Queue, get_current_job
 import feedparser
 
-feedparser.USER_AGENT = "Stroma News RSS Reader Bot"
+feedparser.USER_AGENT = "Longtail News RSS Reader Bot"
 
 from settings import log, QUEUE_NAME_FETCH, QUEUE_NAME_POST
 from database.models import Feed, FeedFetch, Article
