@@ -39,7 +39,7 @@ def get_feeds_to_fetch():
         last_fetched = now - f.max_ts
 
         if not f.max_pp:
-            if last_fetched > timedelta(days=7) and f.max_status == 200 and random.random() <= 0.1:
+            if f.max_status and last_fetched > timedelta(days=7) and f.max_status < 400 and random.random() <= 0.1:
                 return_feeds.append(f)
             continue
 
