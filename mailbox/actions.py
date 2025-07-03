@@ -54,7 +54,7 @@ def add_feed(cm, message_text):
         else:
             cm.reply = f'The feed was added to your list. (#{feed.id}) ({cm.id})'
     elif created and feed_created:
-        cm.reply = f'A new feed was found and added to the system and to your list. Articles will show up after the site is first fetched.'
+        cm.reply = f'A new feed was found and added to the system and to your list. Articles will show up after the site is first fetched. Some sites may not show any articles if they are NSFW or if there are errors trying to access the site.'
     else:
         cm.reply = f'The feed "{feed.title}" seems to be on your list already.'
 
