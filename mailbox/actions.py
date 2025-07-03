@@ -6,6 +6,7 @@ from rq import Queue
 from settings import log, QUEUE_NAME_FETCH
 from feeds.user import build_user_feed
 from feeds.tasks import fetch_feed_task, save_articles_task
+from utils.httputil import get_rss_from_url
 from utils.filesystem import upload_user_feed_to_s3
 from database.models import UserFeedSubscription, UserTermSubscription, UserTermFilter, Article, ArticlePost, Feed
 
@@ -33,7 +34,7 @@ def remove_filter_term(cm, message_text):
 def add_feed(cm, message_text):
     url = cm.facet_link or message_text
     log.info(f"#{cm.id}: add_feed(\"{url}\")")
-    feed = get_feed_from_url(cm, url)
+    feed, feed_created = get_feed_from_url(cm, url, True)
 
     if feed and not feed.active:
         log.error(f'#{cm.id}: feed {feed.id} is inactive')
@@ -47,8 +48,13 @@ def add_feed(cm, message_text):
         return
 
     ufs, created = UserFeedSubscription.get_or_create(user=cm.sender, feed=feed)
-    if created:
-        cm.reply = f'The feed "{feed.title}" was added to your list.'
+    if created and not feed_created:
+        if feed.title:
+            cm.reply = f'The feed "{feed.title}" was added to your list.'
+        else:
+            cm.reply = f'The feed was added to your list. (#{feed.id}) ({cm.id})'
+    elif created and feed_created:
+        cm.reply = f'A new feed was found and added to the system and to your list. Articles will show up after the site is first fetched.'
     else:
         cm.reply = f'The feed "{feed.title}" seems to be on your list already.'
 
@@ -57,7 +63,7 @@ def remove_feed(cm, message_text):
 
     url = cm.facet_link or message_text
     log.info(f"#{cm.id}: remove_feed(\"{url}\")")
-    feed = get_feed_from_url(cm, url)
+    feed, created = get_feed_from_url(cm, url, False)
 
     if not feed:
         cm.process_error = f'#{cm.id}: no feed found for "{url}"'
@@ -93,8 +99,9 @@ def remove_term(cm, message_text):
         cm.reply = f'The term was not removed from your list. Perhaps you spelled it differently when adding it? ({cm.id})'
 
 
-def get_feed_from_url(cm, url):
+def get_feed_from_url(cm, url, attempt_create=False):
     p = urlparse(url)
+    created = False
 
     # is this a sufficient test for article url vs. bsky url?
     if p.netloc == "bsky.app":
@@ -106,16 +113,23 @@ def get_feed_from_url(cm, url):
         if isinstance(feed, Article):
             feed = feed.feed_fetch.feed
 
-        if not feed:
-            # try getting new feed from url
+        if not feed and attempt_create:
+            # try finding and creating a new feed from the article url
             feed = get_feed_from_article(cm, url)
+            created = True
 
     if not feed:
         log.error(f'#{cm.id}: no feed found for "{url}"')
-        return None
+        return None, False
 
-    return feed
+    return feed, created
 
 
 def get_feed_from_article(cm, url):
-    return None
+    try:
+        rss = get_rss_from_url(url)
+        feed = Feed.create(uri=rss)
+        return feed
+    except Exception as e:
+        log.error(f"#{cm.id}: get_feed_from_article - {e.__class__.__name__}: {e}")
+        return None
