@@ -3,8 +3,11 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 import feedparser
+from peewee import fn
 
 from settings import log
+from database.models import Article
+
 
 feedparser.USER_AGENT = "Longtail News RSS Reader Bot"
 
@@ -72,7 +75,7 @@ def get_http_headers(accept_type=ACCEPT_TYPE_DEFAULT):
 
 def get_url_contents(url, allowed_content_types):
 
-    r = requests.get(url, headers=get_http_headers())
+    r = requests.get(url, headers=get_http_headers(), timeout=8)
 
     if r.status_code != 200:
         return None, r.status_code
@@ -169,3 +172,26 @@ def allow_rss_link(rss, fp):
     except Exception as e:
         log.error(f"error testing feed: {rss} - {e}")
         return False
+
+
+if __name__=="__main__":
+
+    articles = Article.select().order_by(fn.Random()).limit(32)
+    for art in articles:
+        feed_uri_actual = art.feed_fetch.feed.uri
+        print(feed_uri_actual)
+        print(art.link)
+
+        try:
+            feed_uri_lookup = get_rss_from_url(art.link)
+        except Exception as e:
+            print(f"exception: {e}")
+            print()
+            continue
+
+        if feed_uri_actual == feed_uri_lookup:
+            print("\t(match)")
+        elif feed_uri_lookup:
+            print(f"\tactual: {feed_uri_actual}")
+            print(f"\tlookup: {feed_uri_lookup}")
+        print()
