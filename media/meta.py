@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from settings import log
 from database.models import Article, ArticleMeta
 from utils.strutil import html_to_text, is_likely_binary
-from utils.http import get_http_headers
+from utils.httputil import get_http_headers
 from utils.image import is_image_content_type
 
 def get_article_meta(article_id):

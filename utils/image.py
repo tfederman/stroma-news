@@ -5,7 +5,7 @@ import requests
 
 from settings import log
 from utils.strutil import is_likely_binary
-from utils.http import get_http_headers, ACCEPT_TYPE_DEFAULT, ACCEPT_TYPE_IMAGES
+from utils.httputil import get_http_headers, ACCEPT_TYPE_DEFAULT, ACCEPT_TYPE_IMAGES
 
 
 def get_http_image(url, accept_type=ACCEPT_TYPE_DEFAULT):
